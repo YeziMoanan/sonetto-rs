@@ -4,6 +4,7 @@ pub mod config;
 pub mod noticecp_config;
 pub mod noticecp_query;
 pub mod patch_version;
+pub mod prompt_get;
 pub mod receiver_app;
 pub mod resource_check;
 pub mod sdk_pay;

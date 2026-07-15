@@ -38,6 +38,30 @@ impl GamePatchVersionRsp {
 }
 
 #[derive(Serialize, Default)]
+pub struct GamePromptGetRsp {
+    pub code: u16,
+    pub msg: String,
+    pub data: GamePromptGetRspData,
+}
+
+impl GamePromptGetRsp {
+    pub fn empty_success() -> Self {
+        Self {
+            code: 200,
+            msg: String::from("成功"),
+            data: GamePromptGetRspData {
+                prompt: String::new(),
+            },
+        }
+    }
+}
+
+#[derive(Serialize, Default)]
+pub struct GamePromptGetRspData {
+    pub prompt: String,
+}
+
+#[derive(Serialize, Default)]
 pub struct GameConfigRsp {
     pub code: u16,
     pub msg: String,
