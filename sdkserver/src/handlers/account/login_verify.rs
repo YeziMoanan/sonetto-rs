@@ -17,11 +17,7 @@ pub async fn post(
         }
     };
 
-    tracing::debug!(
-        "Login verify request - User ID: {}, Token: {}...",
-        user_id,
-        &req.token[..8]
-    );
+    tracing::debug!("Login verify request - User ID: {}", user_id);
 
     // Validate token and get user
     let user = match get_user_with_token_validation(&state, user_id, &req.token).await {

@@ -41,21 +41,17 @@ pub async fn post(State(state): State<AppState>, Json(req): Json<Value>) -> Json
         expires_at: now + (expires_in * 1000),
     };
 
-    tracing::info!("Visitor login attempt - device_id={}", device_id);
+    tracing::info!("Visitor login attempt");
 
     let user = match handle_user_login(&state.game.db, &email, &password, token_info, now).await {
         Ok(user) => user,
         Err(e) => {
-            tracing::warn!("Visitor login failed for {}: {}", email, e);
+            tracing::warn!("Visitor login failed: {}", e);
             return Json(error_response("Visitor login failed"));
         }
     };
 
-    tracing::info!(
-        "Visitor login successful - user_id={}, account={}",
-        user.id,
-        email
-    );
+    tracing::info!("Visitor login successful - user_id={}", user.id);
 
     Json(AccountLoginRsp {
         code: 200,

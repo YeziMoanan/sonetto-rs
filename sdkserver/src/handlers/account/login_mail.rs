@@ -11,12 +11,7 @@ pub async fn post(
 ) -> Json<AccountLoginRsp> {
     let now = ServerTime::now_ms() as i64;
 
-    tracing::info!(
-        "Login attempt - Email: {}, Device: {}, OS: {}",
-        req.account,
-        req.device_info.device_name,
-        req.device_info.os_version
-    );
+    tracing::info!("Login attempt");
 
     // Generate tokens
     let token = generate_token();
@@ -42,15 +37,14 @@ pub async fn post(
     {
         Ok(user) => user,
         Err(e) => {
-            tracing::warn!("Login failed for {}: {}", req.account, e);
+            tracing::warn!("Login failed: {}", e);
             return Json(create_error_response());
         }
     };
 
     tracing::info!(
-        "Login successful - User ID: {}, Email: {}, First join: {}",
+        "Login successful - User ID: {}, First join: {}",
         user.id,
-        req.account,
         user.first_join
     );
 

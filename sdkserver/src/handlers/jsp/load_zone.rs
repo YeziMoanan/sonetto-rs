@@ -12,10 +12,7 @@ pub async fn get(
     State(state): State<AppState>,
     Query(params): Query<LoadZoneQuery>,
 ) -> Json<JspLoadZoneRsp> {
-    tracing::info!(
-        "LoadZone request - Token: {}...",
-        &params.session_id[..8.min(params.session_id.len())]
-    );
+    tracing::info!("LoadZone request");
 
     // Look up user by token
     let user = sqlx::query("SELECT id, username, level FROM users WHERE token = ?1")

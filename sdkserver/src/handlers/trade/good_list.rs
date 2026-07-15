@@ -6,12 +6,9 @@ use axum::response::Json;
 
 pub async fn post(
     State(_): State<AppState>,
-    axum::Json(req): axum::Json<GoodListReq>,
+    axum::Json(_req): axum::Json<GoodListReq>,
 ) -> Json<GoodListRsp> {
-    tracing::info!(
-        "Received goods list request from device: {}",
-        req.device_info.device_id
-    );
+    tracing::info!("Received goods list request");
 
     let response = GoodListRsp {
         code: 200,
