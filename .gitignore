@@ -8,3 +8,10 @@ assets/*
 !assets/starter/**
 !assets/static/
 !assets/static/**
+
+# CN 3.8 local runtime
+/runtime/
+*.log
+*.err.log
+*.bak
+*.db
