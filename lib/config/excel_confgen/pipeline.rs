@@ -53,6 +53,13 @@ pub fn generate_rust_modules(json_dir: &str, output_dir: &str) -> Result<()> {
         )?;
     }
 
+    if tables.is_empty() {
+        return Err(anyhow!(
+            "no configured JSON tables found in {}",
+            Path::new(json_dir).display()
+        ));
+    }
+
     tables.sort();
     fs::write(output.join("mod.rs"), emit_root_module(&tables))?;
     Ok(())

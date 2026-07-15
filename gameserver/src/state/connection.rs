@@ -6,9 +6,12 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 
 use crate::error::AppError;
+use crate::network::packet::CompatibilityCommand;
 
 use crate::state::battle::manager::fight_data_mgr::FightDataMgr;
-use crate::util::common::{encode_message, send_raw_server_message};
+use crate::util::common::{
+    encode_message, send_compatibility_server_message, send_raw_server_message,
+};
 use sonettobuf::CmdId;
 
 use super::{AppState, CommandPacket, PlayerState};
@@ -17,7 +20,7 @@ pub struct ConnectionContext {
     pub socket: Arc<Mutex<TcpStream>>,
     pub state: Arc<AppState>,
     pub player_id: Option<i64>,
-    pub send_queue: VecDeque<CommandPacket>,
+    pub(crate) send_queue: VecDeque<CommandPacket>,
 
     pub player_state: Option<PlayerState>,
 
@@ -240,7 +243,7 @@ impl ConnectionContext {
         seq
     }
 
-    pub fn queue_packet(&mut self, packet: CommandPacket) {
+    pub(crate) fn queue_packet(&mut self, packet: CommandPacket) {
         self.send_queue.push_back(packet);
     }
 
@@ -344,6 +347,26 @@ impl ConnectionContext {
         Ok(())
     }
 
+    pub(crate) async fn send_compatibility_reply(
+        &mut self,
+        command: CompatibilityCommand,
+        body: Vec<u8>,
+        result_code: i16,
+        up_tag: u8,
+    ) -> Result<(), AppError> {
+        let down_tag = self.state.reserve_down_tag().await;
+        let packet = CommandPacket::CompatibilityReply {
+            command,
+            body,
+            result_code,
+            up_tag,
+            down_tag,
+        };
+
+        self.queue_packet(packet);
+        Ok(())
+    }
+
     pub async fn flush_send_queue(&mut self) -> Result<(), AppError> {
         let mut socket = self.socket.lock().await;
 
@@ -366,6 +389,23 @@ impl ConnectionContext {
                     send_raw_server_message(
                         &mut socket,
                         cmd_id,
+                        body,
+                        result_code,
+                        up_tag,
+                        down_tag,
+                    )
+                    .await?;
+                }
+                CommandPacket::CompatibilityReply {
+                    command,
+                    body,
+                    result_code,
+                    up_tag,
+                    down_tag,
+                } => {
+                    send_compatibility_server_message(
+                        &mut socket,
+                        command,
                         body,
                         result_code,
                         up_tag,

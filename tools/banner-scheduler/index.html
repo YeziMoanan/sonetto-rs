@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>Sonetto 卡池排期工具</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="scheduler.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">SONETTO · LOCAL TOOL</p>
+        <h1>卡池排期工具</h1>
+        <p class="subtitle">筛选、排序并导出可重复应用的国际服卡池时间表</p>
+      </div>
+      <div class="safety-note">
+        <span class="safety-dot" aria-hidden="true"></span>
+        页面只生成 JSON，不接触数据库
+      </div>
+    </header>
+
+    <div id="status" class="status" data-kind="info" role="status" aria-live="polite">
+      请先载入 UTF-8 格式的 summon_pool.json
+    </div>
+
+    <main>
+      <section class="panel source-panel" aria-labelledby="source-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="step">01 · 数据源</p>
+            <h2 id="source-heading">载入卡池</h2>
+          </div>
+          <div class="counter-row" aria-label="卡池统计">
+            <span>总数 <strong id="source-count">0</strong></span>
+            <span>可见 <strong id="visible-count">0</strong></span>
+            <span>已选 <strong id="selected-count">0</strong></span>
+          </div>
+        </div>
+
+        <label class="drop-zone" id="source-drop-zone" for="source-file">
+          <span class="drop-icon" aria-hidden="true">↓</span>
+          <span><strong>选择或拖入 summon_pool.json</strong></span>
+          <span class="muted">文件只在本机浏览器中读取</span>
+          <input id="source-file" type="file" accept="application/json,.json">
+        </label>
+
+        <div class="preset-bar" aria-label="内置预设">
+          <span class="preset-label">快速选择</span>
+          <button type="button" data-preset="all">全部卡池</button>
+          <button type="button" data-preset="collaboration">全联动</button>
+          <button type="button" data-preset="rerun">全复刻</button>
+          <button type="button" data-preset="activity">全活动卡池</button>
+          <button type="button" data-preset="limited">全限定</button>
+        </div>
+
+        <div class="source-layout">
+          <aside class="filters" aria-label="卡池筛选">
+            <label>
+              名称或 ID
+              <input id="filter-query" type="search" placeholder="例如 Collaboration 或 341">
+            </label>
+            <label>
+              ID 前缀
+              <input id="filter-id-prefix" type="text" inputmode="numeric" placeholder="例如 34">
+            </label>
+            <fieldset>
+              <legend>bannerFlag</legend>
+              <div id="filter-flags" class="chip-options">
+                <span class="muted">载入后生成</span>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>type</legend>
+              <div id="filter-types" class="chip-options">
+                <span class="muted">载入后生成</span>
+              </div>
+            </fieldset>
+            <label>
+              选择状态
+              <select id="filter-selection">
+                <option value="all">全部</option>
+                <option value="selected">仅已选</option>
+                <option value="unselected">仅未选</option>
+              </select>
+            </label>
+            <div class="stack-actions">
+              <button id="select-visible" type="button" class="primary">选择当前可见</button>
+              <button id="clear-visible" type="button">清除当前可见</button>
+            </div>
+          </aside>
+
+          <div class="table-shell pool-table-shell" tabindex="0" aria-label="卡池列表，可横向滚动">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col" class="check-column">选择</th>
+                  <th scope="col">ID</th>
+                  <th scope="col">英文名称</th>
+                  <th scope="col">Flag</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Priority</th>
+                </tr>
+              </thead>
+              <tbody id="pool-list">
+                <tr><td colspan="6" class="empty">尚未载入数据</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel queue-panel" aria-labelledby="queue-heading">
+        <div class="panel-heading compact-heading">
+          <div>
+            <p class="step">02 · 顺序</p>
+            <h2 id="queue-heading">已选队列</h2>
+          </div>
+          <div class="inline-actions">
+            <label class="compact-control">
+              排序
+              <select id="queue-sort">
+                <option value="source">源文件顺序</option>
+                <option value="id">ID 升序</option>
+                <option value="priority">Priority 升序</option>
+              </select>
+            </label>
+            <button id="clear-queue" type="button">清空</button>
+          </div>
+        </div>
+
+        <div class="table-shell queue-table-shell" tabindex="0" aria-label="已选卡池队列，可横向滚动">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">顺序</th>
+                <th scope="col">ID</th>
+                <th scope="col">名称</th>
+                <th scope="col">手动上线</th>
+                <th scope="col">手动下线</th>
+                <th scope="col">操作</th>
+              </tr>
+            </thead>
+            <tbody id="selected-queue">
+              <tr><td colspan="6" class="empty">从上方选择卡池后在此调整顺序</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel schedule-panel" aria-labelledby="schedule-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="step">03 · 时间</p>
+            <h2 id="schedule-heading">生成排期</h2>
+          </div>
+          <span class="timezone-badge">Asia/Shanghai · UTC+08:00</span>
+        </div>
+
+        <div class="schedule-controls">
+          <label>
+            排期模式
+            <select id="schedule-mode">
+              <option value="simultaneous">同时开放</option>
+              <option value="batch">按批次轮换</option>
+              <option value="manual">逐池手动日期</option>
+            </select>
+          </label>
+          <label id="start-date-field">
+            起始日期
+            <input id="start-date" type="date" max="2038-01-18">
+          </label>
+          <label id="days-per-batch-field" hidden>
+            每批持续天数
+            <input id="days-per-batch" type="number" min="1" step="1" value="7">
+          </label>
+          <label id="pools-per-batch-field" hidden>
+            每批卡池数量
+            <input id="pools-per-batch" type="number" min="1" step="1" value="2">
+          </label>
+        </div>
+
+        <div class="preview-header">
+          <h3>时间预览</h3>
+          <span class="muted">下线时间为排他边界</span>
+        </div>
+        <div class="table-shell preview-table-shell" tabindex="0" aria-label="排期预览，可横向滚动">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">批次/顺序</th>
+                <th scope="col">卡池</th>
+                <th scope="col">上线</th>
+                <th scope="col">下线</th>
+              </tr>
+            </thead>
+            <tbody id="schedule-preview">
+              <tr><td colspan="4" class="empty">选择卡池后生成预览</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel export-panel" aria-labelledby="export-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="step">04 · 保存</p>
+            <h2 id="export-heading">预设与导出</h2>
+          </div>
+        </div>
+
+        <div class="save-grid">
+          <div class="save-card">
+            <h3>浏览器自定义预设</h3>
+            <p class="muted">保存在当前浏览器的 localStorage，可随时重新编辑。</p>
+            <label>
+              预设名称
+              <input id="workspace-name" type="text" maxlength="80" placeholder="例如：联动池两周轮换">
+            </label>
+            <button id="save-workspace" type="button" class="primary">保存当前预设</button>
+            <label>
+              已保存预设
+              <select id="workspace-select">
+                <option value="">暂无已保存预设</option>
+              </select>
+            </label>
+            <div class="split-actions">
+              <button id="load-workspace" type="button">载入</button>
+              <button id="delete-workspace" type="button" class="danger">删除</button>
+            </div>
+          </div>
+
+          <div class="save-card">
+            <h3>JSON 导入 / 导出</h3>
+            <p class="muted">导出的 JSON 交给固定 PowerShell 执行器；页面不会写入数据库。</p>
+            <label>
+              导出名称
+              <input id="preset-name" type="text" maxlength="80" value="Banner schedule">
+            </label>
+            <label class="file-button" for="preset-file">
+              导入已有 JSON
+              <input id="preset-file" type="file" accept="application/json,.json">
+            </label>
+            <button id="export-preset" type="button" class="primary strong" disabled>导出排期 JSON</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>默认仅生成文件</span>
+      <span>数据库执行器默认 Dry Run</span>
+      <span>不修改活动总表</span>
+    </footer>
+  </body>
+</html>

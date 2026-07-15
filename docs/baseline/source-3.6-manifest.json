@@ -1,0 +1,2950 @@
+﻿{
+    "schema_version":  1,
+    "source_root":  "D:\\python-tools\\重返未来1999\\sonetto-rs",
+    "source_head":  "a53396c87f04dfc354b51dce11be23d01c929f5c",
+    "exclusions":  [
+                       ".git",
+                       "target",
+                       "runtime",
+                       "*.log",
+                       "*.bak",
+                       "*.db"
+                   ],
+    "files":  [
+                  {
+                      "path":  ".gitignore",
+                      "length":  143,
+                      "sha256":  "B13F5EEF25BA604F1D9EE6E92D15420DCBC3B06919C4EE48B6C04CC660766F29"
+                  },
+                  {
+                      "path":  "assets/starter/achievement/achievement_info.json",
+                      "length":  69841,
+                      "sha256":  "03A1407B6630CD8E2847F93C36A0BB24DC36B264187268783710623C7F1AEC0D"
+                  },
+                  {
+                      "path":  "assets/starter/charge/get_charge_info.json",
+                      "length":  3599,
+                      "sha256":  "0BCB1B98914168030E8C042F2A1C6B8450C25DE7A6F6DC569FB6C80235A3998D"
+                  },
+                  {
+                      "path":  "assets/starter/command/command_post_info.json",
+                      "length":  4494,
+                      "sha256":  "E4403ABEDCD3E9FC16BC0DCC5C14FEA0DF692B9C3D0ADAD458DC999EF112929A"
+                  },
+                  {
+                      "path":  "assets/starter/critter_info.json",
+                      "length":  3272,
+                      "sha256":  "5D7B9D8C8CF2D9BC37E165ED9C00DA851B5189BEE1196CEFD2661E77116E2BD2"
+                  },
+                  {
+                      "path":  "assets/starter/dialog/dialog_info.json",
+                      "length":  138,
+                      "sha256":  "FD16DDABB16BFBEF9A948A61FB8455EA3116F9F3E126FB554E96FDDAFCCE058A"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon.json",
+                      "length":  7687,
+                      "sha256":  "12B002D42A709E911A9149E208B803554992C210EBD6A1A6E44943372B571FDD"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_1.json",
+                      "length":  22449,
+                      "sha256":  "7EBFDDA16CC2165A51B4C089FE539BB93D10F82550101F81ED6DEC65B5069C92"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_10.json",
+                      "length":  22638,
+                      "sha256":  "FE2C5AFE8F1956230C399A798C00423294569A1C0175DE727C17CC54318BA04B"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_11.json",
+                      "length":  22510,
+                      "sha256":  "40CB85775BB8AC283AD1A84EBC862EA7AF0B799C06E4CD5B96C6405441A27474"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_12.json",
+                      "length":  22506,
+                      "sha256":  "22A3290A500D3DF07E0E7C79212FDC9D2E7932EDBA5A0F4B5BD49B3C8BE261BB"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_13.json",
+                      "length":  22465,
+                      "sha256":  "8D15D8290C3C1C22CFDDCD8E2F2C546F1499D2B64C928619E6561E0FB12FDD42"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_14.json",
+                      "length":  11502,
+                      "sha256":  "7404B48EB0E393CEBB3628B0C79180F9551B8C13D20F03A29838564A851C45F4"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_2.json",
+                      "length":  22423,
+                      "sha256":  "970132F70C8D49224E050B9AFFBF65EB5BE1AF60AAF6E8CAF0EE5897AAACFA12"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_3.json",
+                      "length":  22462,
+                      "sha256":  "87985BDCADEFFAB483D53660663F653DA40F2F0E89DE0F815CD314ED4B7E18B9"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_4.json",
+                      "length":  22316,
+                      "sha256":  "464E77CFA0922143603A8F7071E1727A5A1EC07304F029EB41FA19BCD3651566"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_5.json",
+                      "length":  22262,
+                      "sha256":  "17BCCE1C35B93A30C32AAE967D5AE0EC9954691C4E14F7FEE1B21EE5C521F238"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_6.json",
+                      "length":  22276,
+                      "sha256":  "B32EFC34D7C7AC8D8119A9DD3CA54495DF52BAF24454C8AE940770ED2212E02C"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_7.json",
+                      "length":  22306,
+                      "sha256":  "589AAB49866C81D708A0924021947183E39B5DE8A01C9805B22EBD6F2DA1B142"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_8.json",
+                      "length":  22371,
+                      "sha256":  "6CD7A0214AEE2AA038C987FAEA6CF91559C6B22A67DE8CAC56645244B4B257D0"
+                  },
+                  {
+                      "path":  "assets/starter/dungeon/dungeon_infos_push_9.json",
+                      "length":  22601,
+                      "sha256":  "2441206F9D285594589A43E8E173016E3ED083CE3616C41D313390DD92B488F5"
+                  },
+                  {
+                      "path":  "assets/starter/explore/explore_simple_info.json",
+                      "length":  6175,
+                      "sha256":  "2EF8C552945C6233A731AFE742864B0EAC0D423EE3E78E9C918BF2A222AF1082"
+                  },
+                  {
+                      "path":  "assets/starter/friend/friend_info.json",
+                      "length":  559,
+                      "sha256":  "D3EC2A1A97ABE06F1C163B6C261E75913AAB75EA6772E1558894183FA9EC4B7C"
+                  },
+                  {
+                      "path":  "assets/starter/player_card/player_card_info.json",
+                      "length":  816,
+                      "sha256":  "AD00FD21098F7DDF27DD3E4FFEB160C87A9F5B3FD74D105C1AF29C5070466E32"
+                  },
+                  {
+                      "path":  "assets/starter/property/simple_property.json",
+                      "length":  1328,
+                      "sha256":  "589C9E328A8CDE3C31EB2A56835FA3D967C4117E91B5F443C10A925FAAE24D51"
+                  },
+                  {
+                      "path":  "assets/starter/room/block_package_info.json",
+                      "length":  5004,
+                      "sha256":  "2BF1E3A471D1A45A73A093BEC0492F8BA685250B7B967D6B0254CB453E49CE14"
+                  },
+                  {
+                      "path":  "assets/starter/room/building_info.json",
+                      "length":  9539,
+                      "sha256":  "7409D1199512E8519BB94B5EB901F55F305FC43351A64D75661CCD611E9436E2"
+                  },
+                  {
+                      "path":  "assets/starter/room/character_interaction_info.json",
+                      "length":  4851,
+                      "sha256":  "130D0A2AF394BAE505DE177AA5CD444BDF3ED8B330AF20EF208A09190307B198"
+                  },
+                  {
+                      "path":  "assets/starter/room/room_info.json",
+                      "length":  33065,
+                      "sha256":  "FB2071BE41E557D272503B1F04579377326D50990BA0C3F4BCFCC6A6B9F50B48"
+                  },
+                  {
+                      "path":  "assets/starter/story/get_story.json",
+                      "length":  51,
+                      "sha256":  "964AB8546B5CEFD831A43AA371C17823027C76E18A9BE2147A52CE3C942F9DE2"
+                  },
+                  {
+                      "path":  "assets/starter/summon/summon_history.json",
+                      "length":  5057,
+                      "sha256":  "5B9C72D4CF80FE71DC021A16E6BF0BCC5BB242FC0A6D794319F2FC1939C2EDBA"
+                  },
+                  {
+                      "path":  "assets/starter/summon/summon_info.json",
+                      "length":  54090,
+                      "sha256":  "0FB2DAC75768BEC0D59BC1591FA6FBBE49C613C1240CA5F875E6161A8E8B9E6C"
+                  },
+                  {
+                      "path":  "assets/starter/tower/tower_info.json",
+                      "length":  131928,
+                      "sha256":  "7A86166D9515F4A7C0339711DCC820B5CFCA8ECBDD9FFEC794C81E1EBEE915A4"
+                  },
+                  {
+                      "path":  "assets/starter/week_walk/week_walk_info.json",
+                      "length":  76029,
+                      "sha256":  "02C0067D91E4D9AE6DA5740968F0529405DBEFE88ADCD74AA8892F273AFD997D"
+                  },
+                  {
+                      "path":  "assets/starter/week_walk/week_walk_ver2_get_info.json",
+                      "length":  5120,
+                      "sha256":  "141E12D4CADF1CAF3C9E7EC9C0B6DFBFF44DD92CC4887CBA9A8DB11F755A1B10"
+                  },
+                  {
+                      "path":  "assets/static/achievement/achievement_info.json",
+                      "length":  69841,
+                      "sha256":  "03A1407B6630CD8E2847F93C36A0BB24DC36B264187268783710623C7F1AEC0D"
+                  },
+                  {
+                      "path":  "assets/static/activity/activity_infos.json",
+                      "length":  109889,
+                      "sha256":  "EB2119CD10974E0AC19A2905246438FD56FEA5C89663F6D713165D637FE7CB74"
+                  },
+                  {
+                      "path":  "assets/static/activity101/activity101_infos_12722.json",
+                      "length":  161,
+                      "sha256":  "F5FF6D43545A9AF818EBEF796A67CA73227453B30C06695DED609C22AA5A4ABB"
+                  },
+                  {
+                      "path":  "assets/static/activity101/activity101_infos_13108.json",
+                      "length":  455,
+                      "sha256":  "FFF06A60FBB7ECCD04A55274CA69DB0053616CB0602AF2D8030A625704FC65B2"
+                  },
+                  {
+                      "path":  "assets/static/activity101/item_change_push.json",
+                      "length":  225,
+                      "sha256":  "9B412DFDC2D67D0D29B5E2631549ECC77E782B226E7F48B1AD95747B805C77AD"
+                  },
+                  {
+                      "path":  "assets/static/activity101/material_change_push.json",
+                      "length":  138,
+                      "sha256":  "0F87C4255D93A96DF9E1DB6CF1F2BD532F038C8D20D4A093FB74B10629EAA2E7"
+                  },
+                  {
+                      "path":  "assets/static/activity101/update_red_dot_push_1.json",
+                      "length":  256,
+                      "sha256":  "8D2C920B2C71C2057FCF1C4A311278ABD0FEA31CD1F1864AB8CD86258B64AB94"
+                  },
+                  {
+                      "path":  "assets/static/activity101/update_red_dot_push_2.json",
+                      "length":  270,
+                      "sha256":  "EBF6BC34BDEF1C587B5BB999C23EA3981845A0BE108122D7F5576F560452C3BE"
+                  },
+                  {
+                      "path":  "assets/static/activity101/update_red_dot_push_3.json",
+                      "length":  460,
+                      "sha256":  "E3CF2C2C0360FC097D0467F6D09769ADB243EE1B29D0C3BD0D74D79FD6086E33"
+                  },
+                  {
+                      "path":  "assets/static/activity104/104_info.json",
+                      "length":  0,
+                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                  },
+                  {
+                      "path":  "assets/static/activity125/activity125_infos_13116.json",
+                      "length":  106,
+                      "sha256":  "37D0BFCB97B96437033F3BF6D9533FECCDA7B0CDC3DB8B90326D3D876E9827C0"
+                  },
+                  {
+                      "path":  "assets/static/activity160/get_info.json",
+                      "length":  103,
+                      "sha256":  "082E321857A5A6CE7833802E6E49C5FEB2B69800FCA6D2187E9A47FF75947246"
+                  },
+                  {
+                      "path":  "assets/static/activity165/get_info.json",
+                      "length":  935,
+                      "sha256":  "D1D510DF69957C5770B0C9E7B59693D1F93750994B4BC8BB0FB6B5598F6C2A49"
+                  },
+                  {
+                      "path":  "assets/static/activity208/get_info.json",
+                      "length":  199,
+                      "sha256":  "29BCE648AA66D7CB6EEADEF7F53EF18EF494EC4495D355DB0C0C04EAD888B4B9"
+                  },
+                  {
+                      "path":  "assets/static/activity209/get_info.json",
+                      "length":  49,
+                      "sha256":  "465DD4CAEAA2B33D2ADB35C0E4887B168273156361B36B3579CEDF6326374B35"
+                  },
+                  {
+                      "path":  "assets/static/antique/antique_info.json",
+                      "length":  403,
+                      "sha256":  "2C6D4CC3374A056BDBE3438240B60D3EBB56BDB50DFA4C0079203CA8890BDFD9"
+                  },
+                  {
+                      "path":  "assets/static/bgm/bgm_info.json",
+                      "length":  3296,
+                      "sha256":  "8FFB7812A0C32A9F446206DFE7AAC769991457D2626E8B01263531C5A4D2D874"
+                  },
+                  {
+                      "path":  "assets/static/bp/bp_info.json",
+                      "length":  5971,
+                      "sha256":  "2A3219977AE769701FFD7EC9E7F8FC2B66008E7E39BD40C9FF4782100BAC9624"
+                  },
+                  {
+                      "path":  "assets/static/charge/gain_special_block_push.json",
+                      "length":  34,
+                      "sha256":  "BB1AE0456912524DE17346A40F0B6427028547037F66A03F680FF9C9CF67F7AE"
+                  },
+                  {
+                      "path":  "assets/static/charge/material_change_push.json",
+                      "length":  138,
+                      "sha256":  "F0519951BA7C1904C5542781855A8498865A58DD0A6C839A587B74BCB3C26EF1"
+                  },
+                  {
+                      "path":  "assets/static/charge/update_red_dot_push.json",
+                      "length":  256,
+                      "sha256":  "2D8586BC9B689B470151F6E1ED9E9C5E1137254CCB7AA5B99E3226257E931E4B"
+                  },
+                  {
+                      "path":  "assets/static/client/stat_info_push.json",
+                      "length":  142,
+                      "sha256":  "9474CD77CD4254B7F3C86EEBF18A3890A1C5C5E5417B5945E9E690A2F339438B"
+                  },
+                  {
+                      "path":  "assets/static/command/command_post_info.json",
+                      "length":  4494,
+                      "sha256":  "E4403ABEDCD3E9FC16BC0DCC5C14FEA0DF692B9C3D0ADAD458DC999EF112929A"
+                  },
+                  {
+                      "path":  "assets/static/critter/critter_get_info.json",
+                      "length":  26211,
+                      "sha256":  "AD9643E42D5F99F38A25B79E46E31886494905598B7DAD20FBBA7DD157132A76"
+                  },
+                  {
+                      "path":  "assets/static/currency/currency_list.json",
+                      "length":  13360,
+                      "sha256":  "262EDA77C3521C292F3F52E971C8524A6A3AF360B4F058F07E852100F1D125DF"
+                  },
+                  {
+                      "path":  "assets/static/currency/currency_push_1.json",
+                      "length":  165,
+                      "sha256":  "A9BF0C4B2A0DBD55C12473F53FFB88AEC1EC75AC27D2CB9839B2D86AEBCBC4A6"
+                  },
+                  {
+                      "path":  "assets/static/currency/currency_push_2.json",
+                      "length":  164,
+                      "sha256":  "A13F4CC276A0C2E5D656881AB95F2D727FDAF6040533C47798C279AC9E831111"
+                  },
+                  {
+                      "path":  "assets/static/dialog/dialog_info.json",
+                      "length":  138,
+                      "sha256":  "FD16DDABB16BFBEF9A948A61FB8455EA3116F9F3E126FB554E96FDDAFCCE058A"
+                  },
+                  {
+                      "path":  "assets/static/dice/dice_hero.json",
+                      "length":  1873,
+                      "sha256":  "031ACE35DFAD37EB01E190D20FF2FF209E8D02B409C1BA98AAE5517DC6EEFBDE"
+                  },
+                  {
+                      "path":  "assets/static/dungeon/begin_round.json",
+                      "length":  272566,
+                      "sha256":  "87E079A812BD5786C822A488EBBA4217EFC82049129C2DEA3BBDC676C8E9375C"
+                  },
+                  {
+                      "path":  "assets/static/dungeon/instruction_dungeon_info.json",
+                      "length":  452,
+                      "sha256":  "0A4CE38AD56F014D08789B189049198AFEABB4336B5870601E4A309974946048"
+                  },
+                  {
+                      "path":  "assets/static/dungeon/start_dungeon.json",
+                      "length":  92937,
+                      "sha256":  "AADFAE43C4F455B44884B2D97A07A5750573325D1BC2FEEDE44BACE1ED6D2ED3"
+                  },
+                  {
+                      "path":  "assets/static/equip/equip_info.json",
+                      "length":  12967,
+                      "sha256":  "8308FF92774DE06C34C90115B400B21C68109907033F416527E2736DB95548EF"
+                  },
+                  {
+                      "path":  "assets/static/explore/explore_simple_info.json",
+                      "length":  6175,
+                      "sha256":  "2EF8C552945C6233A731AFE742864B0EAC0D423EE3E78E9C918BF2A222AF1082"
+                  },
+                  {
+                      "path":  "assets/static/friend/friend_info.json",
+                      "length":  559,
+                      "sha256":  "D3EC2A1A97ABE06F1C163B6C261E75913AAB75EA6772E1558894183FA9EC4B7C"
+                  },
+                  {
+                      "path":  "assets/static/guide/guide_infos.json",
+                      "length":  25720,
+                      "sha256":  "B4FF53F71E5363764C042CB54D4A74438A92174BF79FC2CC103EAC260E22CF69"
+                  },
+                  {
+                      "path":  "assets/static/handbook/handbook_info.json",
+                      "length":  26424,
+                      "sha256":  "733F3764B738CAC417C0E28EE1A35E8651245C84E9FE3497117D8A278D6855CF"
+                  },
+                  {
+                      "path":  "assets/static/hero_story/hero_story.json",
+                      "length":  11917,
+                      "sha256":  "14C8936F7ED9CDFE6595C8308217D28576894D7CED785DCD97DE49B7E07E6E04"
+                  },
+                  {
+                      "path":  "assets/static/heros/hero_group_common_list copy.json",
+                      "length":  17416,
+                      "sha256":  "470DE7AF7C0F054E2884E3AC13D226751C5A8148E87C574BD6048C69E03034BC"
+                  },
+                  {
+                      "path":  "assets/static/heros/hero_group_common_list.json",
+                      "length":  5049,
+                      "sha256":  "847B0F0951239C56B54571E746DDE67301203B3A3F7589C7BC0597160E86C4A9"
+                  },
+                  {
+                      "path":  "assets/static/heros/hero_group_list.json",
+                      "length":  902,
+                      "sha256":  "E4EE51740527F9DD5780746239FDA179890EFA3A5A601A626F36F45575C336D1"
+                  },
+                  {
+                      "path":  "assets/static/heros/hero_group_snapshots copy.json",
+                      "length":  46270,
+                      "sha256":  "3C28D0C6D4FD3A179C20C2BCD724D6713F115FA0B559EB28085E7CB3D663023E"
+                  },
+                  {
+                      "path":  "assets/static/heros/hero_group_snapshots.json",
+                      "length":  1632,
+                      "sha256":  "55DB2F81DA20E0CFD330B213F4F70E1BBBAB5EB04173BF77A5E61F1824388DB1"
+                  },
+                  {
+                      "path":  "assets/static/heros/hero_list.json",
+                      "length":  499734,
+                      "sha256":  "DB8C71C678A54A91C439E2CED5CB2F9A7A286D6F7867B3B92239C6B3CB4E05BE"
+                  },
+                  {
+                      "path":  "assets/static/item/item_push_1.json",
+                      "length":  222,
+                      "sha256":  "5E007EE80E19E00656E094CA951E50227EBB575EA7F19CCB6D943AA889CBE9FD"
+                  },
+                  {
+                      "path":  "assets/static/login/critter_info_push.json",
+                      "length":  3272,
+                      "sha256":  "5D7B9D8C8CF2D9BC37E165ED9C00DA851B5189BEE1196CEFD2661E77116E2BD2"
+                  },
+                  {
+                      "path":  "assets/static/login/update_red_dot_1.json",
+                      "length":  660,
+                      "sha256":  "A08CF0B55FE400EC8CFA3797DF9083C03ED9187475184F49EBBE9598DCA461D9"
+                  },
+                  {
+                      "path":  "assets/static/login/update_red_dot_2.json",
+                      "length":  256,
+                      "sha256":  "8D2C920B2C71C2057FCF1C4A311278ABD0FEA31CD1F1864AB8CD86258B64AB94"
+                  },
+                  {
+                      "path":  "assets/static/login/update_red_dot_3.json",
+                      "length":  256,
+                      "sha256":  "690C4BF555F5B76BE9A5D3333F8A6E3941CBDE3BF023D92DB40F38746DEBE55B"
+                  },
+                  {
+                      "path":  "assets/static/manufacture/manufacture_info.json",
+                      "length":  2275,
+                      "sha256":  "E2E21433CC899F0EB3981CB2F95B5D4CCB987777A7A6430AE2F76FAEFD25FAAF"
+                  },
+                  {
+                      "path":  "assets/static/material/material_push_1.json",
+                      "length":  307,
+                      "sha256":  "D4CBB2D60BEE70064DBF4AD55AA9C103D9E28A1E6506DFD733A53B74CC994894"
+                  },
+                  {
+                      "path":  "assets/static/necrologist_story/necrologist_story.json",
+                      "length":  103,
+                      "sha256":  "00C43F175C83C342CA02B4CCBB7864DF68F1DBAD36E343FE231C52275D9F1DCB"
+                  },
+                  {
+                      "path":  "assets/static/player/cloth_info.json",
+                      "length":  297,
+                      "sha256":  "4B9C5EC0D25556B74571E350DD7D90C64BC1FF36448E69E0872F2E9EF3CAE5C2"
+                  },
+                  {
+                      "path":  "assets/static/player/player_info.json",
+                      "length":  7475,
+                      "sha256":  "C4FC0AC893E997596C03A7A1F72170DDDFA221ABA1993F508378D95EFBCA48AC"
+                  },
+                  {
+                      "path":  "assets/static/player_card/player_card_info.json",
+                      "length":  816,
+                      "sha256":  "AD00FD21098F7DDF27DD3E4FFEB160C87A9F5B3FD74D105C1AF29C5070466E32"
+                  },
+                  {
+                      "path":  "assets/static/power_maker/power_maker_info.json",
+                      "length":  117,
+                      "sha256":  "7E7D231D9E1B445F8E17AECEF26EF105939D47399887A958A9F99C20AE052E98"
+                  },
+                  {
+                      "path":  "assets/static/property/property_push_1.json",
+                      "length":  77,
+                      "sha256":  "BAF633ECAEC97E717404CD550578C71501AEBBB0B05A2D5E8BA54372E0008351"
+                  },
+                  {
+                      "path":  "assets/static/property/simple_property.json",
+                      "length":  1328,
+                      "sha256":  "287B958EE85C3A73B133D503DCEADAB23E41C9B028F61F6EA61CF2B18A55F9B9"
+                  },
+                  {
+                      "path":  "assets/static/red_dot/red_dot_infos.json",
+                      "length":  60918,
+                      "sha256":  "5398ED30733D95C1A9F9217C53DDE61A0B1F61764627CB7DD4394BDACA1DEF3A"
+                  },
+                  {
+                      "path":  "assets/static/room/room_log.json",
+                      "length":  3714,
+                      "sha256":  "2DCFFE1038B1AE445F1DF41D7FF6DF9F7A4BA485B60DD499C0319842F9827AD4"
+                  },
+                  {
+                      "path":  "assets/static/room/room_ob_info.json",
+                      "length":  29604,
+                      "sha256":  "9A71165BD6A02EA6F170E474A943886D653C613107E2566ADE7B89A07E18AFFC"
+                  },
+                  {
+                      "path":  "assets/static/room/room_plan_info.json",
+                      "length":  350,
+                      "sha256":  "305374166F50484378F23F1B5222D3608D657A7C59A30405A67F8B0E27E4A08D"
+                  },
+                  {
+                      "path":  "assets/static/rouge/rouge_outside_info.json",
+                      "length":  226791,
+                      "sha256":  "6322834F0E7C2DF48BF663559FEDB7EA6558A84CF2F608D93D221905FC7F9C8C"
+                  },
+                  {
+                      "path":  "assets/static/sign_in/sign_in_info.json",
+                      "length":  1132,
+                      "sha256":  "0C8D1652DDBB745EB0CD26C32FEAFBB33C3F1B02AEDE66E5F8A724902540F8E7"
+                  },
+                  {
+                      "path":  "assets/static/task/task_info.json",
+                      "length":  56713,
+                      "sha256":  "895F4D1A186433AC6A032C64BB46FCAB76BCAD8D077EED96479E3A8104D46192"
+                  },
+                  {
+                      "path":  "assets/static/tower/tower_info.json",
+                      "length":  131928,
+                      "sha256":  "7A86166D9515F4A7C0339711DCC820B5CFCA8ECBDD9FFEC794C81E1EBEE915A4"
+                  },
+                  {
+                      "path":  "assets/static/user_setting/setting_infos.json",
+                      "length":  183,
+                      "sha256":  "CB7B0060FA6EF9F82CC9AA7BB4123FE1F1FE4F9CE8AA8CA4568D79A2179CDDC8"
+                  },
+                  {
+                      "path":  "assets/static/week_walk/week_walk_info.json",
+                      "length":  76029,
+                      "sha256":  "02C0067D91E4D9AE6DA5740968F0529405DBEFE88ADCD74AA8892F273AFD997D"
+                  },
+                  {
+                      "path":  "assets/static/week_walk/week_walk_ver2_get_info.json",
+                      "length":  5120,
+                      "sha256":  "141E12D4CADF1CAF3C9E7EC9C0B6DFBFF44DD92CC4887CBA9A8DB11F755A1B10"
+                  },
+                  {
+                      "path":  "Cargo.lock",
+                      "length":  82391,
+                      "sha256":  "B6FF829BEA9BC7FD35C142FBAC4725752DF5AA9AA215B49FA763E5A77B2BFBEA"
+                  },
+                  {
+                      "path":  "Cargo.toml",
+                      "length":  1607,
+                      "sha256":  "A1FE066BB787C144024201A7EFD6BA13FE0D6ED8EC0DD26C89E8E9841FB847EC"
+                  },
+                  {
+                      "path":  "common/Cargo.toml",
+                      "length":  314,
+                      "sha256":  "46353B83CB787D327F9539531F348313A1F12C13DECCD36FF26C7989676CFDBE"
+                  },
+                  {
+                      "path":  "common/Config.toml",
+                      "length":  909,
+                      "sha256":  "FEF7A738E719F90BD78C87324ED2D7BA93CF4CF6A97FF15546C5E702F715373D"
+                  },
+                  {
+                      "path":  "common/src/config.rs",
+                      "length":  4447,
+                      "sha256":  "079D868CC06590ED9A9C1C1A006D2FF6E2EC8F5440ECF6E5B18C42AED4A46953"
+                  },
+                  {
+                      "path":  "common/src/lib.rs",
+                      "length":  1363,
+                      "sha256":  "C279F427B38D1BAA2A3DED8300756DF303B3C28A21F1763E858CB0B5F44521E3"
+                  },
+                  {
+                      "path":  "common/src/time.rs",
+                      "length":  2175,
+                      "sha256":  "0B7D0A7F550CD3C5481197DEA9277FFA10C447F6CE10F18F4762790ECB7E1EA5"
+                  },
+                  {
+                      "path":  "database/Cargo.toml",
+                      "length":  354,
+                      "sha256":  "824BF90FD26B387D40BF7DCCC6FB7CA2237D80A222C7B396815A946001444F8F"
+                  },
+                  {
+                      "path":  "database/migrations/001_users.sql",
+                      "length":  1003,
+                      "sha256":  "E8572494E9E54D3DB6208C5B1E1098995AEFAE19301A596F7DB5680112A651EC"
+                  },
+                  {
+                      "path":  "database/migrations/002_player_state.sql",
+                      "length":  1871,
+                      "sha256":  "BF39D3BE28E7803B8A2121AD90F564E588AF2AB05055EFCF8BF302E02FDEB756"
+                  },
+                  {
+                      "path":  "database/migrations/003_heros.sql",
+                      "length":  9263,
+                      "sha256":  "2F25C7C18189AD13FFDAF94EF0046B538BFAE8E4029546129D7CD39DABCCC1A9"
+                  },
+                  {
+                      "path":  "database/migrations/004_red_dots.sql",
+                      "length":  793,
+                      "sha256":  "B84DE9AEABEDF127FD2651446C7E7F0E95E9CAF8487484007763A6C498339186"
+                  },
+                  {
+                      "path":  "database/migrations/005_charge_stats.sql",
+                      "length":  0,
+                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                  },
+                  {
+                      "path":  "database/migrations/006_critters.sql",
+                      "length":  2933,
+                      "sha256":  "51CAFB65400B8F1F12425BEDF44FA7783BBA704A2CA118EB77B4D32E3C14004B"
+                  },
+                  {
+                      "path":  "database/migrations/007_player_info.sql",
+                      "length":  1639,
+                      "sha256":  "B494CCB3D85A06D0C9962037FC76CC91F52C4D4B64F3A038D8B9225F857C21CA"
+                  },
+                  {
+                      "path":  "database/migrations/008_equipment.sql",
+                      "length":  681,
+                      "sha256":  "07397D4CD423A036EB6BA42F2707D44610AD1989D0210FE7EAF0114FA37D9C77"
+                  },
+                  {
+                      "path":  "database/migrations/009_items.sql",
+                      "length":  1759,
+                      "sha256":  "F4CD141877D814B3FAF21F56E413A543F3027CCAB428333E95B56DA12F3BAA52"
+                  },
+                  {
+                      "path":  "database/migrations/010_currencies.sql",
+                      "length":  421,
+                      "sha256":  "F38625888C1F5A7E300F71B3BB2B644B39915BBB990AEBDA47BE29D0B1374651"
+                  },
+                  {
+                      "path":  "database/migrations/011_guide_progress.sql",
+                      "length":  335,
+                      "sha256":  "F2433DFD092ED2E2E5D39B6ACE271B93CAEE46DAB344C6066365ECB2771A1FE0"
+                  },
+                  {
+                      "path":  "database/migrations/012_user_stats.sql",
+                      "length":  331,
+                      "sha256":  "1A7D2A05DAF394F7430B933D7CAF8AD9695C4C95DAC6BF243D43E2FE4C8216A5"
+                  },
+                  {
+                      "path":  "database/migrations/013_hero_groups.sql",
+                      "length":  2409,
+                      "sha256":  "E2C13B1480D1122FF56C2950798E21FFA8325E66553F74D87B8ECCC769B75B9D"
+                  },
+                  {
+                      "path":  "database/migrations/014_hero_group_snapshot.sql",
+                      "length":  1904,
+                      "sha256":  "D9CBC0AD748694700549A323690BEADAB33EA4278AEE6D541E219AEC13B7E608"
+                  },
+                  {
+                      "path":  "database/migrations/015_user_dungeons.sql",
+                      "length":  3626,
+                      "sha256":  "12B22617F5ED5EEFAC1AAAC41E6403F97DD9E8E191BEB15D60D3A1F3F28CC89B"
+                  },
+                  {
+                      "path":  "database/migrations/016_users_stories.sql",
+                      "length":  821,
+                      "sha256":  "AE78D9374746A80F47822E6E698A548C60B8CD45132F0090C83E17244BD6587E"
+                  },
+                  {
+                      "path":  "database/migrations/017_user_charge_info.sql",
+                      "length":  801,
+                      "sha256":  "0D66704C96EEAC7FD853BA714E754E27458D2699F363746B13322C873656FDD1"
+                  },
+                  {
+                      "path":  "database/migrations/018_block_packages.sql",
+                      "length":  2296,
+                      "sha256":  "CA28D8DA11488C5B1BFBD66E88FC937E392E3EA2E22BC8584BC3B842D1AE3625"
+                  },
+                  {
+                      "path":  "database/migrations/019_user_buildings.sql",
+                      "length":  520,
+                      "sha256":  "6B905B0CF6A94A992F304701D46A089866F33B231307CF632D0CAA10B39294A0"
+                  },
+                  {
+                      "path":  "database/migrations/020_user_character_interactions.sql",
+                      "length":  1111,
+                      "sha256":  "CADED2CE9D4B62AA6CD3C8058114A5B5939609FBD7F19922ED463B3C574F87AE"
+                  },
+                  {
+                      "path":  "database/migrations/021_user_summons.sql",
+                      "length":  2986,
+                      "sha256":  "CE4E1E919A8A275AB60F1330D19218EA84C328524DA4519DB65D9D332B4E6F41"
+                  },
+                  {
+                      "path":  "database/migrations/022_user_tower_info.sql",
+                      "length":  5155,
+                      "sha256":  "7FF3A517870112A3F8033102B36B6B541BFD11F69398B2F0EAE1A2906C03F9CD"
+                  },
+                  {
+                      "path":  "database/migrations/023_user_achievements.sql",
+                      "length":  525,
+                      "sha256":  "A6586578D0427A4F87FCBE007A1386C7C22A486EF0C30B86ED9E127B2B231203"
+                  },
+                  {
+                      "path":  "database/migrations/024_user_dialogs.sql",
+                      "length":  261,
+                      "sha256":  "4C25DA0B1C2E75BA0915BF777FCDD327119F8092B82132422C10238556204EA7"
+                  },
+                  {
+                      "path":  "database/migrations/025_user_antiques.sql",
+                      "length":  323,
+                      "sha256":  "A96169D18B2A80CC31DF8D2100F02A103408A4349945C8ACC7D5D97F4CCEA797"
+                  },
+                  {
+                      "path":  "database/migrations/026_user_weekwalk_info.sql",
+                      "length":  3497,
+                      "sha256":  "2A65A285E6335C15856ED0123C71C9B12189F8F14300961A33C90CE84F91679B"
+                  },
+                  {
+                      "path":  "database/migrations/027_user_weekwalk_v2_info.sql",
+                      "length":  4154,
+                      "sha256":  "743522EBBF5B60C06D90D78F857786DE8C1647EAE60100139761E03F4B2E7524"
+                  },
+                  {
+                      "path":  "database/migrations/028_user_explore_info.sql",
+                      "length":  2740,
+                      "sha256":  "C851DA2EED4CDB1A61DBB189B7DA3F952C6E32F68889AC888A153B486545A96F"
+                  },
+                  {
+                      "path":  "database/migrations/029_user_player_card_info.sql",
+                      "length":  1332,
+                      "sha256":  "3AE4A110B1DAB0C7B7F02695C4A057F795AE8B25D034E9909D76F908311DFC79"
+                  },
+                  {
+                      "path":  "database/migrations/030_user_command_post_info.sql",
+                      "length":  2447,
+                      "sha256":  "01839B30A79005D9F27142461615FCFA31B2307ABAD3DC73CBD47D3C31F82DFA"
+                  },
+                  {
+                      "path":  "database/migrations/031_user_friends.sql",
+                      "length":  634,
+                      "sha256":  "F14EA9A137C4BB33D831FDB03B583AF60BDD14AB587ECBB37E7AC2F56903A11B"
+                  },
+                  {
+                      "path":  "database/migrations/032_user_sign_in_info.sql",
+                      "length":  1618,
+                      "sha256":  "DA8AB57E4010303D36DC0BD4C538FEF962FE4CF447FE08F752F926203FFEB192"
+                  },
+                  {
+                      "path":  "database/migrations/033_user_simple_properties.sql",
+                      "length":  390,
+                      "sha256":  "3FD9C7CFD674CD952D827301391B4E4B9D2012081326DE6D77BE12304EBCEA42"
+                  },
+                  {
+                      "path":  "database/migrations/034_user_activity101_claims.sql",
+                      "length":  702,
+                      "sha256":  "C690BFE1176CF9B2016B974AA20C427523279CE682F690C78D19FDB5E78E9227"
+                  },
+                  {
+                      "path":  "database/migrations/035_dungeon_records.sql",
+                      "length":  582,
+                      "sha256":  "385627C51EC2D95510740432A51FA679F89796558FA1DF3278A2D33E8F32BD86"
+                  },
+                  {
+                      "path":  "database/migrations/036_battle_replays.sql",
+                      "length":  575,
+                      "sha256":  "7190DE5447937CA001CDC0F483E4B77832FB4EEA7F015998EDB1E1D5C4FDDE2B"
+                  },
+                  {
+                      "path":  "database/migrations/037_user_bgm.sql",
+                      "length":  579,
+                      "sha256":  "79B931EBA3A0ED3F2E3C434B9946A4D2ECE8BA1A448BE89327CC1F762DF9BB7E"
+                  },
+                  {
+                      "path":  "database/migrations/038_user_summons_history.sql",
+                      "length":  1235,
+                      "sha256":  "AEE25DAAEA2247F3CBBE78CB67B44954D03C19C8C209D893E5710DF6EDECB69F"
+                  },
+                  {
+                      "path":  "database/migrations/039_user_gacha_state.sql",
+                      "length":  494,
+                      "sha256":  "5031E7E923BD5EEB9B8EAF622F760832B7D12C1B8B70D6FB72CB7560B92B917A"
+                  },
+                  {
+                      "path":  "database/migrations/040_user_store_goods.sql",
+                      "length":  280,
+                      "sha256":  "BDAE3DBBFB4C485AAAD058F96828AB2E8BECA23B8FE44C16EB5AAF4241613A36"
+                  },
+                  {
+                      "path":  "database/migrations/041_user_mails.sql",
+                      "length":  1428,
+                      "sha256":  "47A9CE2B978C8048C61DF6EFE62007017A322BB8AE0B1B0A75A35D00302590E0"
+                  },
+                  {
+                      "path":  "database/migrations/042_banner_schedule.sql",
+                      "length":  228,
+                      "sha256":  "5B305D223A8068296D38DE2E27E0D6B1627DED477F20A9EF1ACAC9B56C3A99AF"
+                  },
+                  {
+                      "path":  "database/src/config.rs",
+                      "length":  984,
+                      "sha256":  "5E1207B8138A6E8296965ED12A247AE4AAE0B46F34899D06B123F7D3341ABB51"
+                  },
+                  {
+                      "path":  "database/src/db/game/achievements.rs",
+                      "length":  2141,
+                      "sha256":  "64914A8CC39F1DA9AFF2FD6C76C88277F8CC87809030EC168E0E61F8328963B9"
+                  },
+                  {
+                      "path":  "database/src/db/game/activity101.rs",
+                      "length":  2702,
+                      "sha256":  "2FAA3FDE95515A6D4AD312DF06E10661FC931C05EF47EA71BCD976784593F1B1"
+                  },
+                  {
+                      "path":  "database/src/db/game/antiques.rs",
+                      "length":  1202,
+                      "sha256":  "CF28231EF31013ACE5D02426823CAB68367AE4CF7293E55C20C6DB1F02778951"
+                  },
+                  {
+                      "path":  "database/src/db/game/battle.rs",
+                      "length":  1953,
+                      "sha256":  "1F2D1C84D81955229C5FED1352C9FE44CDB219DE51DA070FCA0B6E9B862FF9EE"
+                  },
+                  {
+                      "path":  "database/src/db/game/bgm.rs",
+                      "length":  2917,
+                      "sha256":  "7E751161FC9252E70EE40BD41D6DFCCCC34510B482F8D209A4BE363CFBB0D7B4"
+                  },
+                  {
+                      "path":  "database/src/db/game/block_packages.rs",
+                      "length":  8151,
+                      "sha256":  "C9D17565FF329D847F10CA3184F0A3C4843960C9B07CFF0809C7331D1168BC52"
+                  },
+                  {
+                      "path":  "database/src/db/game/buildings.rs",
+                      "length":  2143,
+                      "sha256":  "19375E54A04C853A82FC611E85DC5155917B424F5036C6C45405FDB2F99DC06D"
+                  },
+                  {
+                      "path":  "database/src/db/game/character_interactions.rs",
+                      "length":  3143,
+                      "sha256":  "933874900B8E2999C30BABC2B95F2545D6CCE7F64C5EA5552A19C2B5BA74DDFC"
+                  },
+                  {
+                      "path":  "database/src/db/game/charges.rs",
+                      "length":  1974,
+                      "sha256":  "E392D2499A928126D296F94841082CD64A4BE47EC434A997C06437590DF51307"
+                  },
+                  {
+                      "path":  "database/src/db/game/command_post.rs",
+                      "length":  2668,
+                      "sha256":  "B11A18CE11B8826FBDB3A99E4F814CEFFA11B8D1B370D749543E7F67FBDFF766"
+                  },
+                  {
+                      "path":  "database/src/db/game/critters.rs",
+                      "length":  6428,
+                      "sha256":  "C515A754B41D760E6E179B3BA4715EC8EB02DC07C1898CE2C225755FEFFCE55E"
+                  },
+                  {
+                      "path":  "database/src/db/game/currencies.rs",
+                      "length":  4093,
+                      "sha256":  "F4E863E215D26692A407274ED44FFFD15A32B2B209FFA6568923FFA814D51095"
+                  },
+                  {
+                      "path":  "database/src/db/game/dialogs.rs",
+                      "length":  1008,
+                      "sha256":  "3F9BC1A5BA28C3C84ED041C8330371F0C22D6EB7A468A1AC415DA024B1EFB6CC"
+                  },
+                  {
+                      "path":  "database/src/db/game/dungeons.rs",
+                      "length":  13173,
+                      "sha256":  "CB37BBAA1DE6E7AAD716251E1EC43890FECFCDFB6B765CB1DC0D6EF8D21095CF"
+                  },
+                  {
+                      "path":  "database/src/db/game/equipment.rs",
+                      "length":  8769,
+                      "sha256":  "85253FFBC928EB67A861D4AFDFE140E58177E46723E347A56CBD586A49A65F63"
+                  },
+                  {
+                      "path":  "database/src/db/game/explore.rs",
+                      "length":  3787,
+                      "sha256":  "721F74920349E58B0BB26250681A3AD674094A44CE6C708F203C5F0E22DECDE8"
+                  },
+                  {
+                      "path":  "database/src/db/game/friends.rs",
+                      "length":  2115,
+                      "sha256":  "DA6331E7D6125C2A2C87CD41F2420D2416C200D847C4D9C949BA9014FB64FE1C"
+                  },
+                  {
+                      "path":  "database/src/db/game/guides.rs",
+                      "length":  1402,
+                      "sha256":  "309EF489A85BF3487438119A8EF906C68C43989F4BDAB3959889CFA4DFCD28FD"
+                  },
+                  {
+                      "path":  "database/src/db/game/hero_group_snapshots.rs",
+                      "length":  12440,
+                      "sha256":  "64F26C22BBEFDED4D0265EFD94EB7F4999837446D2CB775BC06905C72ED9B209"
+                  },
+                  {
+                      "path":  "database/src/db/game/hero_groups.rs",
+                      "length":  6185,
+                      "sha256":  "1819158A25A95E0712EE21E745F9B72E28DE0323206F38EEAF5FF9982F78D108"
+                  },
+                  {
+                      "path":  "database/src/db/game/items.rs",
+                      "length":  9139,
+                      "sha256":  "0EBDE75BA199D1FE0D50C4EB6C0CCE6AF84606340F304B92D4056264C72D423F"
+                  },
+                  {
+                      "path":  "database/src/db/game/mod.rs",
+                      "length":  656,
+                      "sha256":  "D65D5F13613413E1B2CBA1B976A8C9F24D870B0408061347F45707DF0F112E78"
+                  },
+                  {
+                      "path":  "database/src/db/game/player_card.rs",
+                      "length":  4335,
+                      "sha256":  "2230B79E382DAF87377E16E1692497B0C01832F38341BF1EDC5979196FBBC463"
+                  },
+                  {
+                      "path":  "database/src/db/game/player_infos.rs",
+                      "length":  6662,
+                      "sha256":  "C8B1FC603B3105DCB5ACE8E7E8F6EB6419140E5D342D9FD2F693191395EEA9CA"
+                  },
+                  {
+                      "path":  "database/src/db/game/red_dots/mod.rs",
+                      "length":  19,
+                      "sha256":  "7E3B04213271E33B981EED01E8AAFD02D50C246D1AFFB7538004F57CA019C1D7"
+                  },
+                  {
+                      "path":  "database/src/db/game/red_dots/red_dots.rs",
+                      "length":  3180,
+                      "sha256":  "F3CDC2CDB22A4EE39D2DB7FAA50C10DA145A8048F15DDD3853909EC12068D29B"
+                  },
+                  {
+                      "path":  "database/src/db/game/sign_in.rs",
+                      "length":  14523,
+                      "sha256":  "8ACDE6B0A3C6ECA625713636AB3797490FC6C0C4529CC443FBB51E4ACC9A97EA"
+                  },
+                  {
+                      "path":  "database/src/db/game/simple_property.rs",
+                      "length":  1470,
+                      "sha256":  "F689D09F051EC717CFB3732E45B26CA37D811FA2031C798AE1CD51470896A8D1"
+                  },
+                  {
+                      "path":  "database/src/db/game/stories.rs",
+                      "length":  2024,
+                      "sha256":  "C4F7A80EF0B31C7F4CAB8AAEED9F035222C4A37FF13DF47E23F12AB065FF9C34"
+                  },
+                  {
+                      "path":  "database/src/db/game/summon.rs",
+                      "length":  11440,
+                      "sha256":  "3D58E513EC59281BEAEE58D9E5E3FCA6EDC5E495A22F3BAC7467E1C108E374B1"
+                  },
+                  {
+                      "path":  "database/src/db/game/tower.rs",
+                      "length":  9753,
+                      "sha256":  "E949B12D45B583E90C930ED408D689788F6F1C53B6365E43CD17B6FFAED5CC99"
+                  },
+                  {
+                      "path":  "database/src/db/game/user_stats.rs",
+                      "length":  1690,
+                      "sha256":  "E99BF4B7B7916738A3D795995E335B550E77E364059D6D243813CBDEEE36E003"
+                  },
+                  {
+                      "path":  "database/src/db/game/weekwalk.rs",
+                      "length":  5687,
+                      "sha256":  "A4DA09D833B85F287497C16B58F5AAFE50187133E45883A8AEA1915352DD2838"
+                  },
+                  {
+                      "path":  "database/src/db/game/weekwalk_v2.rs",
+                      "length":  7608,
+                      "sha256":  "DDE4F888625D396B1E7EF5BFEEA747CB964B17B7848B21A0AC2FFE5B18943DAC"
+                  },
+                  {
+                      "path":  "database/src/db/mod.rs",
+                      "length":  53,
+                      "sha256":  "D541E5D86D22F744CA7DFECD96293BE3DC6DD0DF261D8A3BAEDA22A71BEB6F7E"
+                  },
+                  {
+                      "path":  "database/src/db/starter_data.rs",
+                      "length":  161538,
+                      "sha256":  "E48C7DDF85ECAF94E77D50CC1780BAE68F2C1779E18EE743B519295B438F446A"
+                  },
+                  {
+                      "path":  "database/src/db/user/account.rs",
+                      "length":  11880,
+                      "sha256":  "F06110F7A5B9DB6BC2249D91D5B2F279344DA5AD997766F67EA383AAF60545DE"
+                  },
+                  {
+                      "path":  "database/src/db/user/mod.rs",
+                      "length":  18,
+                      "sha256":  "31D40A614D17B87C6FBA40ABAF285B966172CD4DFF2342FDA9973129C62DCB6A"
+                  },
+                  {
+                      "path":  "database/src/lib.rs",
+                      "length":  1180,
+                      "sha256":  "E62AC22F7A38D058555356F74FA8253AC0CAE693DAFB34060B9AA4A0278B5712"
+                  },
+                  {
+                      "path":  "database/src/models/game/achievements.rs",
+                      "length":  683,
+                      "sha256":  "8D1377D67CED00D54D6DE823FA54E7E88A73F01C386014470D3DB288530242D7"
+                  },
+                  {
+                      "path":  "database/src/models/game/antiques.rs",
+                      "length":  419,
+                      "sha256":  "892212035F1D9FCEB6338AC6E38E009225F71A1EFC139698A3CBE5D0390EFB42"
+                  },
+                  {
+                      "path":  "database/src/models/game/bgm.rs",
+                      "length":  660,
+                      "sha256":  "E8139E58EDC65CFF5E499859544872FEB5F7071AD1F04DE21093C1CC5B9A02BC"
+                  },
+                  {
+                      "path":  "database/src/models/game/block_packages.rs",
+                      "length":  3083,
+                      "sha256":  "2DDF02FD5EF48247588A123FE45DA7596EEC2D467FE30181AA0BB06811765B48"
+                  },
+                  {
+                      "path":  "database/src/models/game/buildings.rs",
+                      "length":  701,
+                      "sha256":  "19FFF9CB794DCD6CB73EC046BC593AB5410D29AAB46E87985CCFC564D55BE930"
+                  },
+                  {
+                      "path":  "database/src/models/game/character_interactions.rs",
+                      "length":  757,
+                      "sha256":  "823A4C88BC3507FAF1858E3A6916A7B758E77C630925DE169CD465CE44BCBF2E"
+                  },
+                  {
+                      "path":  "database/src/models/game/charges.rs",
+                      "length":  684,
+                      "sha256":  "9977CE854B0AF5532C8349A1EFCC0425D28B6622AA800D99C436C0B89B315F71"
+                  },
+                  {
+                      "path":  "database/src/models/game/command_post.rs",
+                      "length":  1418,
+                      "sha256":  "7C305907656D4EFCB5296A9D70ADB2D35C21ACA1359F66B3ACEEF3F140DDD02D"
+                  },
+                  {
+                      "path":  "database/src/models/game/critter.rs",
+                      "length":  3673,
+                      "sha256":  "9007A4C868D0B58D5039AD501392CA73D719322DE3E8F11044D40621FD461630"
+                  },
+                  {
+                      "path":  "database/src/models/game/currencies.rs",
+                      "length":  5091,
+                      "sha256":  "26DA34C83C66FB2691EAFE26F7E5FBBBF0B72005C588061D27D4696A3BEC3338"
+                  },
+                  {
+                      "path":  "database/src/models/game/dungeons.rs",
+                      "length":  2443,
+                      "sha256":  "4AE52D6A62AC79A3E2AC50709599ED24BEFEFC64A8B9C7E5759C36CCF118553D"
+                  },
+                  {
+                      "path":  "database/src/models/game/equipment.rs",
+                      "length":  12262,
+                      "sha256":  "E167FA84A0B6906DF845D6E34A468FB6E0931471769EA43B72003F384D512FD4"
+                  },
+                  {
+                      "path":  "database/src/models/game/explore.rs",
+                      "length":  2213,
+                      "sha256":  "4BAA6BEC06D5E8CE16ECB03DFD779F2B4560A51AAC00FA14626718803A91DD25"
+                  },
+                  {
+                      "path":  "database/src/models/game/guides.rs",
+                      "length":  393,
+                      "sha256":  "40DFE38E05FE39F774CC18A9AD7BE752A8A6564A6F9416CCC0E6FF996D9F29F8"
+                  },
+                  {
+                      "path":  "database/src/models/game/hero_group_snapshots.rs",
+                      "length":  1181,
+                      "sha256":  "8094C5CA5BC899F6D431DF20061DD4F07DDD4D4BB0F437EF5F310B0F8290E46D"
+                  },
+                  {
+                      "path":  "database/src/models/game/hero_groups.rs",
+                      "length":  2319,
+                      "sha256":  "E7F97A42326955085AB8093F76BDC41D33DB98B5411320990C9B90452CD3333C"
+                  },
+                  {
+                      "path":  "database/src/models/game/heros.rs",
+                      "length":  71571,
+                      "sha256":  "5047E0F45754E856080671B61E7726EA4A4EA03E170577341428C181B034F843"
+                  },
+                  {
+                      "path":  "database/src/models/game/items.rs",
+                      "length":  15879,
+                      "sha256":  "6326F528A335DFE1949EB02E872B2DDB3CFB1EE2DD1E97D2002111AF031048F6"
+                  },
+                  {
+                      "path":  "database/src/models/game/mod.rs",
+                      "length":  596,
+                      "sha256":  "F71524CA117A54577A2413C3FB5F6D6BFE5EBF1A2AD65191FE0C6535615F5A63"
+                  },
+                  {
+                      "path":  "database/src/models/game/player_card.rs",
+                      "length":  2638,
+                      "sha256":  "E7990465244483C54C3ADA7796EB6221F7799146413037C2607EB52E58632F90"
+                  },
+                  {
+                      "path":  "database/src/models/game/player_infos.rs",
+                      "length":  3095,
+                      "sha256":  "B433377DF7076D435E49242A3B024AAA2A15D0093CAF975C689C0C69AC0AFB46"
+                  },
+                  {
+                      "path":  "database/src/models/game/player_state.rs",
+                      "length":  2,
+                      "sha256":  "7EB70257593DA06F682A3DDDA54A9D260D4FC514F645237F5CA74B08F8DA61A6"
+                  },
+                  {
+                      "path":  "database/src/models/game/red_dots/mod.rs",
+                      "length":  19,
+                      "sha256":  "7E3B04213271E33B981EED01E8AAFD02D50C246D1AFFB7538004F57CA019C1D7"
+                  },
+                  {
+                      "path":  "database/src/models/game/red_dots/red_dots.rs",
+                      "length":  1093,
+                      "sha256":  "817E6E57BB4DD17F56285B722CC9966BD8102A0E4A85EEB4C645407B4C121DCC"
+                  },
+                  {
+                      "path":  "database/src/models/game/sign_in.rs",
+                      "length":  656,
+                      "sha256":  "8537DF31A83F872FE730BEDCA1C33F22191461D1601F82CAEE259E23711AED53"
+                  },
+                  {
+                      "path":  "database/src/models/game/simple_property.rs",
+                      "length":  448,
+                      "sha256":  "6D01C9D6B92FF5ECB3EC741D4F1823BD500E106147AC2FD6A6608C12FCF6DA3A"
+                  },
+                  {
+                      "path":  "database/src/models/game/stories.rs",
+                      "length":  557,
+                      "sha256":  "AA2989B2758735698AD11E119C8BB8611A1642BB03BB20989741931F7BAB6965"
+                  },
+                  {
+                      "path":  "database/src/models/game/summon.rs",
+                      "length":  3580,
+                      "sha256":  "688E88F51369151C5A5BE15923C8C4D2D7C7D04541FAF31B3830180A1F56D9CE"
+                  },
+                  {
+                      "path":  "database/src/models/game/tower.rs",
+                      "length":  2306,
+                      "sha256":  "F6F9FBFF89EE25AD439BB11CFC0E326D50A003C31A7ABB2DAB33E68547D4A41B"
+                  },
+                  {
+                      "path":  "database/src/models/game/user_stats.rs",
+                      "length":  690,
+                      "sha256":  "B44C10148CFC27A988485E45638F69D553C7908143B7714AB2059A34FE47FFFE"
+                  },
+                  {
+                      "path":  "database/src/models/game/weekwalk.rs",
+                      "length":  2311,
+                      "sha256":  "E8EEE088BAE280022747DF6E035F5B32F6AF8F053B5A5B9BBB307E3D25998DC1"
+                  },
+                  {
+                      "path":  "database/src/models/game/weekwalk_v2.rs",
+                      "length":  2409,
+                      "sha256":  "1D688C20501EA96C688C75F7BDA4656A6561200F136DDEC9D4CCB1A2E0BD1B4E"
+                  },
+                  {
+                      "path":  "database/src/models/mod.rs",
+                      "length":  30,
+                      "sha256":  "EDC4267A3FA27D6B922A65558D9055EDCB23790FE94B5F6261757A0DBCB6AB3B"
+                  },
+                  {
+                      "path":  "database/src/models/user/account.rs",
+                      "length":  332,
+                      "sha256":  "3675E3BA746D61281D774E388D5457E25DBED6396388AC444BB1835187407BA6"
+                  },
+                  {
+                      "path":  "database/src/models/user/mod.rs",
+                      "length":  18,
+                      "sha256":  "31D40A614D17B87C6FBA40ABAF285B966172CD4DFF2342FDA9973129C62DCB6A"
+                  },
+                  {
+                      "path":  "docs/DEVELOPMENT_PLAN.md",
+                      "length":  14023,
+                      "sha256":  "CF4ABDF0765F0A91B2C321D6863E6077BAE5CAC91CC33B70415BF807E13DACE6"
+                  },
+                  {
+                      "path":  "docs/superpowers/plans/2026-07-15-banner-scheduler.md",
+                      "length":  18635,
+                      "sha256":  "8A715AEB32B7BB4C07CD81C687281FA6DDA5FA6802FE371DA2C2852C18CD2008"
+                  },
+                  {
+                      "path":  "docs/superpowers/plans/2026-07-15-cn-3.8-baseline.md",
+                      "length":  26419,
+                      "sha256":  "F0F5FEDC28E3B7528F371E62D60956C145B7DA1058D7F0314CEED5EF9A59495F"
+                  },
+                  {
+                      "path":  "docs/superpowers/plans/2026-07-15-current-nonreprint-banners.md",
+                      "length":  2051,
+                      "sha256":  "845222705FF7F6057049A86567685D493AC7D9453EA86E7979A93E61DD40718E"
+                  },
+                  {
+                      "path":  "docs/superpowers/plans/2026-07-15-database-content-unlock.md",
+                      "length":  5482,
+                      "sha256":  "AB69C724DF982DB7E88E7528F2B51A174BFFF05F0EADB32D5A497672DE764534"
+                  },
+                  {
+                      "path":  "docs/superpowers/plans/2026-07-15-default-all-characters-pool.md",
+                      "length":  8533,
+                      "sha256":  "FC5FC15BD34E60E464091CD23FDE0F7745C0A065E7687F711FD33DDC4252045F"
+                  },
+                  {
+                      "path":  "docs/superpowers/plans/2026-07-15-dungeon-store-readiness-remediation.md",
+                      "length":  37884,
+                      "sha256":  "DDD4F4C5A026002EFCDBE744BBE3CA941CAC5D5B57D6030D1AE1A107B1299934"
+                  },
+                  {
+                      "path":  "docs/superpowers/specs/2026-07-15-banner-scheduler-design.md",
+                      "length":  11722,
+                      "sha256":  "D2CA7F18AA12FD540FE6ACDD5847892B3CBF7EA0BFCE0003FFA64EBD9528404D"
+                  },
+                  {
+                      "path":  "docs/superpowers/specs/2026-07-15-cn-3.8-login-lobby-design.md",
+                      "length":  10243,
+                      "sha256":  "B22060D0AF7F3FFB3858AB930834D57A85991C3082E08EA0A60E86FF8BE4D5E6"
+                  },
+                  {
+                      "path":  "docs/superpowers/specs/2026-07-15-current-nonreprint-banners-design.md",
+                      "length":  976,
+                      "sha256":  "066B8F71B4F6B07B51B0D973925C0FE4617C63D8768D98492A10B3DE870C6FED"
+                  },
+                  {
+                      "path":  "docs/superpowers/specs/2026-07-15-database-content-unlock-design.md",
+                      "length":  2046,
+                      "sha256":  "DDA9A419461478D434CC6935BDB5BFF70A0842715C430AB5894CF8F3E05522BB"
+                  },
+                  {
+                      "path":  "docs/superpowers/specs/2026-07-15-default-all-characters-pool-design.md",
+                      "length":  7418,
+                      "sha256":  "C6C8660D159DF74947414C96253FFCCD78B14921030D43000E8AF227D5EBF7A3"
+                  },
+                  {
+                      "path":  "gameserver/Cargo.toml",
+                      "length":  565,
+                      "sha256":  "ABF590AE1F9D3F0E15FB7B597BFD1653492CBC8D2F3B2E848D965D384B13EFB5"
+                  },
+                  {
+                      "path":  "gameserver/src/error.rs",
+                      "length":  2470,
+                      "sha256":  "8A2544ECE54571A6A956577644F281B727367A9A2D8C567F613AA61ED368EC51"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/achievements.rs",
+                      "length":  879,
+                      "sha256":  "6D779E34E648F66D4CAB07002292BA277F0735D48949C2C3F2E11911A84C0057"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/antique.rs",
+                      "length":  849,
+                      "sha256":  "7FB0DD61FDB6AD3AA10EC655DA453FE053FFF0FCD6567D928CBC64DEE9CBF35F"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/bp/get_bp_info.rs",
+                      "length":  561,
+                      "sha256":  "8E3377F7FD41C607B04627E5744AE43EC97A880F41ADDD2FC351AD5C8F8B0652"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/bp/mod.rs",
+                      "length":  58,
+                      "sha256":  "6042159F7D110AE0C75B0926E8EB45C0B4A00D3C1D01CB40A5FCB8B06AEC7556"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/charge.rs",
+                      "length":  3701,
+                      "sha256":  "FADB2CB0AF119C6BA3F7DDACF9A3BCC4A8BAB5903331F3837493D428182EA8C1"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/chat.rs",
+                      "length":  8672,
+                      "sha256":  "B77794144910D01A10BBC10BFF3485502906F573595CAAC934978B06A847CD52"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/command_post/get_command_post_info.rs",
+                      "length":  1139,
+                      "sha256":  "0B24C2957D0181A0120E734AA14F79C64764E7430C2595D8E58539BCBF31184B"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/command_post/mod.rs",
+                      "length":  88,
+                      "sha256":  "55B1183600B937632492C91030BE13191E06147F84072C2AC59D379CE95C8FEA"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/common/get_server_time.rs",
+                      "length":  678,
+                      "sha256":  "3F42B922266D6ED3CECC3E3A8A7D6F8CD3865A1A833A2F2C477BE6BEFC405CD6"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/common/mod.rs",
+                      "length":  70,
+                      "sha256":  "9CEA3F8BEE7F2797FABF9F27F84703C89AF63A5D8FF8C24E01DEF4BECF3F7FB7"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/critter/critter_get_info.rs",
+                      "length":  540,
+                      "sha256":  "DB06DC2CFE4F495B958C4B42FCFBEFDB529C6345737465372DB94160D2309865"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/critter/mod.rs",
+                      "length":  73,
+                      "sha256":  "E6A030EE47A9BA0A3A535C5805ED6CFC8964D808397AF67239E09E185EF9843F"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/currency/get_buy_power_info.rs",
+                      "length":  559,
+                      "sha256":  "721C1355E85EA640D7E62BCBAC1A4ABD5471B38F96BB2D4B294BE58B84AD5A29"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/currency/get_currency_list.rs",
+                      "length":  1075,
+                      "sha256":  "5FF402FC2AB914958A06B7BAB77EF50653427A591AA9016FE7DF8DC51E10F68E"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/currency/mod.rs",
+                      "length":  153,
+                      "sha256":  "413AF39447728D06658577355F159A7C8679938283483F4F7D214134E5E18699"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/destiny_stone/destiny_stone_use.rs",
+                      "length":  1872,
+                      "sha256":  "500443AB4D53A3AF9794ADD9C39681CA6867EA32DF65ADD26E7343199116C8CB"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/destiny_stone/mod.rs",
+                      "length":  76,
+                      "sha256":  "00617D0482416CBF1158632DE3DD6AD653169147FAB40FEABA556F635A3CE1C7"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dialog/get_dialog_info.rs",
+                      "length":  773,
+                      "sha256":  "6CD46FED7716890EF19A73185E6B6DF43A0FEEFEB8623E94D59552E209394900"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dialog/mod.rs",
+                      "length":  70,
+                      "sha256":  "7E0740F684A1E8CFD7BD150E3DBD38FCF77A5D3BED58DF79660AEAD74E872744"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dice/hero_get_info.rs",
+                      "length":  527,
+                      "sha256":  "2B608CD54C95520270BC2E11ABA28042762CBF3FB5AEF66D4775D24DBDB9DB2F"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dice/mod.rs",
+                      "length":  73,
+                      "sha256":  "8FC1D875915A468135E536EDF2ACE34A6866009F979DEDC5F788DB89ECDEA726"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dungeon/auto_round.rs",
+                      "length":  5740,
+                      "sha256":  "FD1627F7921E4B0D09DA8FB2E5D6BA9660054C93FECA70FF3AEB0428ABB88930"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dungeon/begin_round.rs",
+                      "length":  6147,
+                      "sha256":  "C4566950084807B85BA0A381EF8DFA8A8793548E703E9EDEFD60CBBA8F5CE62C"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dungeon/change_hero_group_select.rs",
+                      "length":  954,
+                      "sha256":  "7EF4BE741F72C6F30A4AD502E00438294325F8B4690167D17E624053CA68DAF2"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dungeon/dungeon_end_dungeon.rs",
+                      "length":  1554,
+                      "sha256":  "BCAB96E6C8022988398C5E2BAE15BA555DCC0B53439DFE7498FEE15400C771BD"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dungeon/fight_end_fight.rs",
+                      "length":  1555,
+                      "sha256":  "40071BA1AC33D6DD71B7F345877740C1AD29210147815F1FE2BA51112FB3AABF"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dungeon/get_dungeon.rs",
+                      "length":  2987,
+                      "sha256":  "33896A5B26737B169D4BAA9F6E0B9A17A78398FC51C07F8BA2B74C11DA0CAF98"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dungeon/get_fight_oper.rs",
+                      "length":  1278,
+                      "sha256":  "CC663FB2E1DC3E6322FAF9DDAB163FB76B4FD1661DFC5A52364C29BF2409891F"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dungeon/get_fight_record_group.rs",
+                      "length":  1430,
+                      "sha256":  "DD83EBD44ABF73A77FA0840B486FD167996A32C63D3E339CC13FEAB1C0F0BA39"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dungeon/instruction_dungeon_info.rs",
+                      "length":  587,
+                      "sha256":  "3A0EF7DD936695609D0C24F7B4425310DA6EAABE4FE0F238CF66C5EBFF923691"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dungeon/mod.rs",
+                      "length":  721,
+                      "sha256":  "59CF8B16F27ACA927678DD17D1E1DC264096BAB97451061D91B409135E609E85"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/dungeon/start_dungeon.rs",
+                      "length":  5897,
+                      "sha256":  "1E7D3C8BDE4B6F9F19BE9D204C1330EE4BB24D70DC2F64FAEF9484017A28BCED"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/equip/equip_break.rs",
+                      "length":  4760,
+                      "sha256":  "D7FB071F38076557135DF952FBE7973AA38EBDE40FA0E973680E6F8BF4838530"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/equip/equip_lock.rs",
+                      "length":  1728,
+                      "sha256":  "DA1FC21845B9A5E44693B7558F61F50C9EEAAA0A0EC127152AE9A7DC8552F5AE"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/equip/equip_refine.rs",
+                      "length":  4483,
+                      "sha256":  "109C20338902B471B10CC8BF0FA0B1A39BE809BE69400D8D3C1CDB00E10E9806"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/equip/equip_strengthen.rs",
+                      "length":  2218,
+                      "sha256":  "5A73EF040C0F7954B083F8E3555E59B4BE9B245DD8561011AAAD1B875102F7A6"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/equip/get_equip_info.rs",
+                      "length":  963,
+                      "sha256":  "302ABF6DC0C29B46CD48E34454D1AC144C1D08114202CF90EBCA947DDE03847E"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/equip/mod.rs",
+                      "length":  306,
+                      "sha256":  "6B0E64912D5009D400F5490BD78EBA96398171D499BE77F4248C6BFF4E2110B0"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/events.rs",
+                      "length":  15532,
+                      "sha256":  "A1298C703B2E821A7C4A0405442908C299E4337D0490241EEC75070AB7CB52D2"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/explore/get_explore_simple_info.rs",
+                      "length":  1095,
+                      "sha256":  "C2E09812B6A0A39CF869756736489A94670C341F5BC724683402000C8918D6F6"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/explore/mod.rs",
+                      "length":  94,
+                      "sha256":  "CF9449F6EFDF7C0E680EA6347986F03A8CF434A1033972F0C0CD5A08F895CF64"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/fight/mod.rs",
+                      "length":  70,
+                      "sha256":  "414233912D0B26126ADB2E1C97D7AECC6405AF5407A4EC2F822D8781B0C73960"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/fight/reconnect_fight.rs",
+                      "length":  461,
+                      "sha256":  "13805AF00569AC09849623C635B7A6261A1C4CE1977F406326B63883D3EC4EEF"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/gacha.rs",
+                      "length":  13172,
+                      "sha256":  "4A9D53803757AB4502AA61B324B56DDF18F1CE8E84F8EE113E372D1999B00E09"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/gm/mod.rs",
+                      "length":  6614,
+                      "sha256":  "1D28900EA01A680EA37D9FE3E4C3AB284FC5BDB0DD79BF3CB7EC67764625B117"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/guide/finish_guide.rs",
+                      "length":  681,
+                      "sha256":  "D39E918AB58A1422A61E8B64086C42B17E532A4695D6F1D7B62703D3519F997B"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/guide/get_guide_info.rs",
+                      "length":  849,
+                      "sha256":  "63DCD11A53407DF809003EA2D477D1D33A710933471F76DEE3AEBDDC9F9A37E1"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/guide/mod.rs",
+                      "length":  126,
+                      "sha256":  "57422BEB3753EF1238189A63A8F923AB49E82AF3E34C85FE0934118CE374317B"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/handbook/get_handbook_info.rs",
+                      "length":  542,
+                      "sha256":  "E209C7D29E90B7B72AA67A9D073D8F70E3F7226611F86B9F86CB96BF5779C64E"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/handbook/mod.rs",
+                      "length":  76,
+                      "sha256":  "7CC9E195D59350D4589991EF5A3A17C23B8EC169C39ECCF7F687E5098EC4C377"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/choice_hero_3123_weapon.rs",
+                      "length":  2278,
+                      "sha256":  "4C2889A054F9FF5EA5DB0A8698AA647BC3409BBE6DA1C6F42F5D1BCFBD264159"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/get_hero_birthday.rs",
+                      "length":  724,
+                      "sha256":  "770691B9229E0AEF85C99277E7EA7869ACFEA22E94B4365E74F7DAA9A63D43F2"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/hero_default_equip.rs",
+                      "length":  1959,
+                      "sha256":  "A9BFAE5F18B85F6ED136D2CA046CCBB4F6C11629E8F92670FB15102D12BD9676"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/hero_info_list.rs",
+                      "length":  1559,
+                      "sha256":  "17C49D5B51FA3D61C12BEF3B03C9B9A5E79AB6D18C3ABD37B418B71F0563D566"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/hero_level_up.rs",
+                      "length":  7491,
+                      "sha256":  "0724424ACF43F71B402FB63464C264B9BACB9A9FBA567A3CC124B8BF845B07D7"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/hero_rank_up.rs",
+                      "length":  9768,
+                      "sha256":  "908DABFEA283035DA3D2DA63864529E4DC0C0BBEF23412C6202DDAAE84727B07"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/hero_red_dot_read.rs",
+                      "length":  1325,
+                      "sha256":  "0ECD04C8E1BEB83ACBFEB6199C89E6181E10E2BC71131FDBC5D00B852FD3D6AB"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/hero_touch.rs",
+                      "length":  1725,
+                      "sha256":  "83D0C47BB231A98F211E793D6528BAE68BFB6A2E748A3ABA1046D336AA153253"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/hero_upgrade_skill.rs",
+                      "length":  3648,
+                      "sha256":  "8F6DA72E302996574277B2A851AFB0ED44509E93B0EBB9A3115C9362E2B9DD6F"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/mark_hero_favor.rs",
+                      "length":  1910,
+                      "sha256":  "0883845F586C0D471588A8597976738006596869DE2E733AF82897165BBC8EFF"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/mod.rs",
+                      "length":  860,
+                      "sha256":  "755FC342DE313B4E4EC320CAE790FBB4E70B73FD966AB15146FA02E9CB660AE7"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/set_show_hero_unique_ids.rs",
+                      "length":  1553,
+                      "sha256":  "3224AAB69932713D058F8D1FDB513F8AC2CA1EDA46574C3001CA536BBE1EA2E9"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero/unmark_is_new.rs",
+                      "length":  1573,
+                      "sha256":  "23738870565418FADD37A0998E3CEF29C4A13284F3890F208253FE4073BDBA12"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero_group/get_hero_group_common_list.rs",
+                      "length":  1194,
+                      "sha256":  "40B0AF949946BF8FBA85036528FD4CA44416A013FA82F9A44082E65AF0348097"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero_group/get_hero_group_list.rs",
+                      "length":  916,
+                      "sha256":  "DD9E8BD3B0242B8C5A4C03D6B1B0DFE36349A4DE02F26178C6D2C72F346427F4"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero_group/get_hero_group_snapshot_list.rs",
+                      "length":  1751,
+                      "sha256":  "4DEB3693DF42413FE764F6CB5EF0473D02CA88EC21DBF3EDFF652C8A042A50F4"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero_group/mod.rs",
+                      "length":  465,
+                      "sha256":  "139A0C9CFB591C974BAB38236C2DF09B26C727767656600AA7C8449E6A17C043"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero_group/set_hero_group_equip.rs",
+                      "length":  1717,
+                      "sha256":  "D34710668FD583593330F124DFF6C0A7B45C75ED1BB5DF86FC8E3F01CF3AEE6F"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero_group/set_hero_group_snapshot.rs",
+                      "length":  3397,
+                      "sha256":  "78718C622B1437C040F5E264F5492EC65ED429DB89947D32BB891C2D2E63BE3E"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero_story/get_hero_story.rs",
+                      "length":  529,
+                      "sha256":  "8EF11398AB3FAE1ECC618EF7B7F8A914986C4828D976389E145AC00D1F1B514D"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/hero_story/mod.rs",
+                      "length":  67,
+                      "sha256":  "3AA08DF2AFF8EA594B5F829A98567982E552137454199E34C78E5BE63FE1D6D4"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/item/auto_use_expire_power_item.rs",
+                      "length":  4794,
+                      "sha256":  "A67E2212F536DEA311B1CEEDFCBCA60E5D46C41984F900645E2A47060676C61A"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/item/get_item_list.rs",
+                      "length":  1375,
+                      "sha256":  "CFCBBF6CC94FB9133A9AAFC76C83F8995F24F9CF75B92F03F7E36D48DE408D92"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/item/mod.rs",
+                      "length":  349,
+                      "sha256":  "87447AFCE98E4CFA5C4FAB708C54A2B30D5234493C4C3C66CB904D620EE30E46"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/item/use_insight_item.rs",
+                      "length":  1840,
+                      "sha256":  "3E9BCF64C3396BD2D5FC3372EF461A9D3D103D2F5A33BD122EF6529F0ADCEFDB"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/item/use_item.rs",
+                      "length":  6763,
+                      "sha256":  "6B1B1B538D14726B9BDD8385714F3D7D0FDD679141CE78E75A1A3F483769E2A8"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/item/util.rs",
+                      "length":  10610,
+                      "sha256":  "3149988162DDE07B0B4A747BD447E05075F1F8AF9FBD672969782EF830D58535"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/mail/get_all_mails.rs",
+                      "length":  3995,
+                      "sha256":  "6AE582D7B2AFF365DCA4CB497222941921FCB7A6DB0B9C411B61CC696E0FF6D7"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/mail/mod.rs",
+                      "length":  182,
+                      "sha256":  "ED850A50260936ADD2D70045F66DFE3D3281EFCA4705892656A3F0B01DB49628"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/mail/read_mail.rs",
+                      "length":  7684,
+                      "sha256":  "66587EC3FA116318DA95C291C886D047049590C92DF4DCE4C6ADDE4AB95AB4D6"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/mail/read_mail_batch.rs",
+                      "length":  8443,
+                      "sha256":  "1448E56F51E4127E97032EA81C980374401BF06DB5218FB9E3618DEDA04E5774"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/manufacture/get_manufacture_info.rs",
+                      "length":  552,
+                      "sha256":  "E632B0E5F577C9A089CD428257E3952012681FA5A452015E00B0FEE12E10BDCA"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/manufacture/mod.rs",
+                      "length":  85,
+                      "sha256":  "8398A1AF5DF554E8589630C3658A59965A42ACC91990CDF49F01BE06CFBC7D0B"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/misc.rs",
+                      "length":  5184,
+                      "sha256":  "A88954EB1E9DB0C045385B25593A78CD695F70112FD89735D3E89F0F1B2D1ECC"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/mod.rs",
+                      "length":  909,
+                      "sha256":  "259C9AB724077C7C68049FF2D53FF82B130374D3F4E9E99B94B6662690EEA4B8"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/necro_story.rs",
+                      "length":  714,
+                      "sha256":  "8B50C5FD8E3447BB538272F0A08468C6F786B79E3BA10F7DBE40C96BD4BF3CB1"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/player/get_assist_bonus.rs",
+                      "length":  935,
+                      "sha256":  "BD1A967EE1BCB6AEB61EB95008E2E8A3C5DAFBB7D69C6B15A5DA04A38B3F74BE"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/player/get_cloth_info.rs",
+                      "length":  517,
+                      "sha256":  "2593DC68DFC5B0BE32BDA2989DE519898CD9EB79BAC1FFCA605951E66AB3DB4B"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/player/get_player_info.rs",
+                      "length":  1392,
+                      "sha256":  "52B8D1599FFE47D63646DE62D2F1329B3440CEC053E4D757D1DDEE0C1D7D2E76"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/player/mod.rs",
+                      "length":  206,
+                      "sha256":  "7F8D8AC40C2D7FBD6B7F6E48B304C737C8E736C8CB30EF6F78652A81F8B32264"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/player_card/get_player_card_info.rs",
+                      "length":  848,
+                      "sha256":  "D07133FC293FCCE503DE808F499CCE8B7701479E30456572380A8D626332A9AD"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/player_card/mod.rs",
+                      "length":  85,
+                      "sha256":  "164C6B699A9010008AE4039D47BA0BACCB443062F8B5E5D3B1D24933A7A77DF7"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/power_maker/get_power_maker_info.rs",
+                      "length":  557,
+                      "sha256":  "3C63060E1FC881F77DEA77A9609825387956F7E796E6A11214B99795D51D4BE3"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/power_maker/mod.rs",
+                      "length":  85,
+                      "sha256":  "07E48FBBC854F3D1E1657DDDCA5EE9E9CE46652D8FCB41EFC3DC436448E1A31E"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/property/get_simple_property.rs",
+                      "length":  884,
+                      "sha256":  "95C1AB2BEA6D5E153DD7E13AE9835988A4E2240DD052BDA2AB51EB4CD5EDDC02"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/property/mod.rs",
+                      "length":  162,
+                      "sha256":  "8179D95FAC517527365B9FA544E41493A453FF43B77E55C3FC50CDA67FFFE5C9"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/property/set_simple_property.rs",
+                      "length":  1803,
+                      "sha256":  "61C185F45AB570DB33993E9437644C139CA9A37A728B64418A3F354226F54FBA"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/red_dot/get_red_dot_infos.rs",
+                      "length":  2304,
+                      "sha256":  "AC10BE7E39D23995AB5FC61915B24394656F4B96F97563529B26769361FB3932"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/red_dot/mod.rs",
+                      "length":  76,
+                      "sha256":  "B22E21BDC56FD88B25660E016397C8B742CFF41E5675BF5573FF5DFF0CCA29BA"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/room/get_block_package_info.rs",
+                      "length":  1138,
+                      "sha256":  "8D47E9B0F0D99A2EB3954D3AEE82D4B5373E25B51DF4CD52585CCAC17AAEE7A3"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/room/get_building_info.rs",
+                      "length":  866,
+                      "sha256":  "FA8A400242971E3923BF9B6B3625C86F6E5D750FF7A689A2B97AA4A242367211"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/room/get_character_interaction_info.rs",
+                      "length":  1139,
+                      "sha256":  "2FFD61CBA97D14B6F4F8F01802C339844A7739590750C55DD1BF926490761ED2"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/room/get_room_info.rs",
+                      "length":  1577,
+                      "sha256":  "E1B03021993F8A2044521EEECD63FE14C3F358E823FAC3518EFE360AC01A87D4"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/room/get_room_log.rs",
+                      "length":  513,
+                      "sha256":  "2AA45D7F35FD96E4612837DD30D80AABBD015C1F2280E345D2D023FC1E6C3B56"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/room/get_room_ob_info.rs",
+                      "length":  530,
+                      "sha256":  "ECEB8CA353954C5605D072972FB67E374406199CBE1DF3068FA4CBA1BB29D3D5"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/room/get_room_plan_info.rs",
+                      "length":  540,
+                      "sha256":  "C7C7F6C6E11175DF909B591832AECA5AC8BAB4800BE16489C9D4605A64C026B6"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/room/mod.rs",
+                      "length":  547,
+                      "sha256":  "818B97487734BF644ADE6C5F9A11991838B1AC8EF267B06FFDEF2DBC37EDE6DD"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/rouge/get_rouge_outside.rs",
+                      "length":  561,
+                      "sha256":  "421778296010E26762FFFC22E326292AA9E4D6C40E0760CC1D82844522531804"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/rouge/mod.rs",
+                      "length":  81,
+                      "sha256":  "520DDC8557532EC6E1F3DF77AB29117FEB97D9CB34D5EDDA7EA9A846B0E73A10"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/sign_in/get_sign_in_info.rs",
+                      "length":  1274,
+                      "sha256":  "CDF23298F80F5C536E5692B579D07BDBAADF6BEE34EAAB680BFFA84A87A406C7"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/sign_in/mod.rs",
+                      "length":  342,
+                      "sha256":  "9B8A704F37317706187B8A7091295CA2273570821C074BA136F1E61FC54A627E"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/sign_in/sign_in.rs",
+                      "length":  1277,
+                      "sha256":  "86361B2FD375B7D5F4349123BDA76849DF1A4B7D593E3E507B5A3405A5078001"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/sign_in/sign_in_addup.rs",
+                      "length":  3497,
+                      "sha256":  "4E7F64DFF41710373C9105488EACA3B6C12564EB5844B23B535096FD20DEE29C"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/sign_in/sign_in_history.rs",
+                      "length":  1165,
+                      "sha256":  "CE5D2DA26361B1417AAC6A56534860CFF8F1C5ACA2AAA284C1E699531E08615E"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/sign_in/sign_in_total_reward_all.rs",
+                      "length":  682,
+                      "sha256":  "66C6F4F54F111CB3291BD2B058EB4C6C1AB4688738B32D2D75AA16081427BC46"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/stat/client_stat_base_info.rs",
+                      "length":  1043,
+                      "sha256":  "003680D6CA082E3A6ED10C45F4A5C9B5CEF32884984AC2717786A740C0A6CD4C"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/stat/mod.rs",
+                      "length":  195,
+                      "sha256":  "2D7CFCE911A269D9EE3A8507B1AD4E3C9BDEFDE757976C24D6B262101BB57B6D"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/stat/update_client_stat_base_info.rs",
+                      "length":  629,
+                      "sha256":  "07A142D5D89A6CE2B5F7B944B2A5664CCFB8A2164678F4D24FE05A5F4F98472F"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/store/buy_goods.rs",
+                      "length":  13235,
+                      "sha256":  "D0D45270AB80600A38F020844F0CE6003B69F4745349A4A343CF35F549C427A3"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/store/get_store_infos.rs",
+                      "length":  2849,
+                      "sha256":  "F071845050FAEC24EF12E018249F6E771A1A1A09D97AD8164872DE7146B07FD1"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/store/mod.rs",
+                      "length":  170,
+                      "sha256":  "7E0E9887F80565590088C8DF74DF47ACE61D8A351EF2C7245841047F5299B02D"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/store/new_order.rs",
+                      "length":  13436,
+                      "sha256":  "D1166EC988458A4D845821152949B5C538237CA31D1CFDD39E4C08B217AA2E3C"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/story.rs",
+                      "length":  2670,
+                      "sha256":  "1867EFE232B86B36DF093C8006AF8111A168005EEF9B64525983E60D5524AF2D"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/system/login.rs",
+                      "length":  6210,
+                      "sha256":  "D39B91045E2B3501A682391593ED5DDA3BDE1FD66668C448720EA03D72FFBF2C"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/system/mod.rs",
+                      "length":  142,
+                      "sha256":  "D72A801B16105E753E8D9ECE1A70C7F1824E9609D7498DB9421B7DA1DEFB3406"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/system/reconnect.rs",
+                      "length":  459,
+                      "sha256":  "0D38DFEEBC6FA45A278C55BBF3D27B0888A1D9F765B7959803A4E288DD93FDBB"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/system/rename.rs",
+                      "length":  1591,
+                      "sha256":  "A9A7D6415F74C32EAF2D27D0719F5DA37A0496B75D3B8AA0EB0C83735B6E2659"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/system/util.rs",
+                      "length":  5124,
+                      "sha256":  "9CA640D7B59381D7C006F5F404615A04212A420A40E832E2513CC804E106161B"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/talent/hero_talent_style_stat.rs",
+                      "length":  1693,
+                      "sha256":  "E9323C218534F7781E538161EF78B3989C3A871D6DFD0FB4DC44AD608C3099B6"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/talent/hero_talent_up.rs",
+                      "length":  6796,
+                      "sha256":  "D085567FEF5A15F5F0199A40C32C44B4AAA3FDC85F02CE8090AD74196BDE0409"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/talent/mod.rs",
+                      "length":  603,
+                      "sha256":  "5626BE88E1EA616EFFFE85F552B5141AD0C0D2424DD35CBCD7E7D9080FF5961A"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/talent/put_talent_cube.rs",
+                      "length":  3293,
+                      "sha256":  "7FA8737453BFB3E76E173F20837A2F8C8933B733D8ED87FFA891358C8F2F5F5D"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/talent/put_talent_scheme.rs",
+                      "length":  1907,
+                      "sha256":  "37F940D239FEF61BB5631B21F57137717C5816D6330C5F96EFB1C240272BFB7A"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/talent/talent_style_read.rs",
+                      "length":  1509,
+                      "sha256":  "6B9C521A779F6B5886531424D52D0B7CED96E89A5D108A7DB40CEB0038F46A79"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/talent/unlock_talent_style.rs",
+                      "length":  6054,
+                      "sha256":  "0B2CC749E47C2C40708921C94850FFB7413DEDDA2EF10AD11D754B4021443CAC"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/talent/use_talent_style.rs",
+                      "length":  1778,
+                      "sha256":  "EB5BBDCDEDAC5D1C086CE28FD05B306E12B2CBF1D8C7A0A9E1299B54B6F5B4A4"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/talent/use_talent_template.rs",
+                      "length":  1726,
+                      "sha256":  "57A1E0C810044DF23B7D2855A8C9EEB3416083298AB7F64AFB01EBE0C4D0623B"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/task/get_task_info.rs",
+                      "length":  518,
+                      "sha256":  "384F209CA58F0907858D0E3236E568ECF80BAAA24959E0802EC23B4958402379"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/task/mod.rs",
+                      "length":  64,
+                      "sha256":  "4AD942C3200C4CF02D17613A9290701449CECBE5192D96BF4D4473B90D8B80AB"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/tower/get_tower_info.rs",
+                      "length":  1064,
+                      "sha256":  "7C5EB6E8D775414373654526089C91559C28E5DE2490A655EA7627AEBA716EEC"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/tower/mod.rs",
+                      "length":  144,
+                      "sha256":  "759B96BF38F029CAA78F30A3FC5FA0EF6C240A414256F1DF4E53C94A08E0B44A"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/tower/start_tower_battle.rs",
+                      "length":  4830,
+                      "sha256":  "3C2A41A8D78AC9708BEE7194D1EF09C9A80E6F67E6DE83306E779287110E849B"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/turnback/get_turnback_info.rs",
+                      "length":  466,
+                      "sha256":  "71A95006F61D813D0556FAF527A59C7864EDC8FD589775887D312383D7891E25"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/turnback/mod.rs",
+                      "length":  76,
+                      "sha256":  "893D2DFFB1B71924FB635EC2D7E0BA6F651429278F81070F56D3786A878C45CF"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/user_setting/get_setting_infos.rs",
+                      "length":  546,
+                      "sha256":  "A835DDAEBC39C712A9BE10E2F5C4A55F876C6302C7B746C454987981920CE9F3"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/user_setting/mod.rs",
+                      "length":  76,
+                      "sha256":  "EB2994ED9AC36690B592560481B87560749F5C07EB8F9BE5FF53637898AD968D"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/voucher/get_unlock_voucher_info.rs",
+                      "length":  505,
+                      "sha256":  "79E3D1571DB9DB414A779FBE4CAB89D297C7A50B5F91D379C3F0D0DAB2DDD065"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/voucher/mod.rs",
+                      "length":  94,
+                      "sha256":  "2570D49D9671FEA9A0D831AE792621AB81E047ADFB32950E645981642D843D52"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/weekwalk/before_start_weekwalk_battle.rs",
+                      "length":  730,
+                      "sha256":  "3B484A3B784F0062E5D10169FCFAF636693464E934C0B9059408254F1F98EC4F"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/weekwalk/get_weekwalk_info.rs",
+                      "length":  1399,
+                      "sha256":  "E1D4C6D39CDDCFF951D508C77881DB064097AEEAA91E94F5A48284653D4F5820"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/weekwalk/mod.rs",
+                      "length":  265,
+                      "sha256":  "BE30685E0A58423B075A171728D33A0FA8B4A88E3C15FB8C048D9DDC2A00EE23"
+                  },
+                  {
+                      "path":  "gameserver/src/handlers/weekwalk/weekwalk_ver2_get_info.rs",
+                      "length":  812,
+                      "sha256":  "93223A302BE4BA12E2590B6D2036EB673B4977F48AF9B5D41078288BB2F18E60"
+                  },
+                  {
+                      "path":  "gameserver/src/lib.rs",
+                      "length":  84,
+                      "sha256":  "627AF14E6E0CC66078ACABBC29084B795236B82C311BE4204BB5A63791AEDAAD"
+                  },
+                  {
+                      "path":  "gameserver/src/main.rs",
+                      "length":  2888,
+                      "sha256":  "557E878B009A1A37E3B81D56D97C0E20C2EBDE33BC1268FD34D0743FF3E8F359"
+                  },
+                  {
+                      "path":  "gameserver/src/network/client.rs",
+                      "length":  1563,
+                      "sha256":  "FCB123A88BF42B0E8F628FF35D7FDA54BEE4DE027939AC1B8CBDC2D1E0CFF461"
+                  },
+                  {
+                      "path":  "gameserver/src/network/handler.rs",
+                      "length":  19808,
+                      "sha256":  "AF487DEEA8BC1D802A3CCA8065E281260AA9FD7D5F6390D7D62E951D07B82C6E"
+                  },
+                  {
+                      "path":  "gameserver/src/network/mod.rs",
+                      "length":  52,
+                      "sha256":  "9EB25078EF0A2CB0257E8A24D28F2725E93443997322B2619CCE20B22A23F60D"
+                  },
+                  {
+                      "path":  "gameserver/src/network/packet.rs",
+                      "length":  7890,
+                      "sha256":  "AB85007060287F4951A5C0E5490DD54A7CF14293FB3BB2F69455DB480746FDAF"
+                  },
+                  {
+                      "path":  "gameserver/src/state/app.rs",
+                      "length":  1147,
+                      "sha256":  "FD2ACEB878C2039361E353AE4EE668B2BA95A28D960BE8F8D2FB30C8ABE78BBA"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/auto.rs",
+                      "length":  1009,
+                      "sha256":  "E17B6034760513B809DF92A2CEC6011E8565241A70ED7B8A8795473E44A7E514"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/cards.rs",
+                      "length":  10450,
+                      "sha256":  "BCB5E9F9EDB8B0236291C6C935C7F1CF4AA39C2340749C43D695FB1E3725D391"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/effects/effect_types.rs",
+                      "length":  44102,
+                      "sha256":  "DF879DA35EEEEAB2C21197CC0F1A7965CDBA9F8E7F7E2AE0DA7CF5553BAD7480"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/effects/mod.rs",
+                      "length":  23,
+                      "sha256":  "5C84C81428E00EB5C4E9DA987A908B5EEFC3005757988F4DA0D6B93BE14170BC"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/end_fight.rs",
+                      "length":  3025,
+                      "sha256":  "34B9AB35EFFA23857A4B813E6E6305AA510ADE8E0FF07DA0210438CF5E8E62CF"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/entity_builder.rs",
+                      "length":  16850,
+                      "sha256":  "3AB54C1F23019A20590A8F5000F202994BF5CB01B2EA3907AEBD7FF6BB374DAB"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/fight_builder.rs",
+                      "length":  18721,
+                      "sha256":  "364BF8870DA4893AA3A15EB7E6B9749C07FBB303926B94AA341C0DC87839A6F2"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/manager/blood_pool_mgr.rs",
+                      "length":  1286,
+                      "sha256":  "48A18D8ABDADEEF89AEA87560A492E4CB5AA4C4E121F3CA5F12B480A7A503D47"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/manager/buff_mgr.rs",
+                      "length":  2071,
+                      "sha256":  "C0AA90A5450D2FA2162D9DF69324EA4AD2DF49F0E4CF4D4BDEED04FE5D64AD29"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/manager/calculate_mgr.rs",
+                      "length":  16337,
+                      "sha256":  "38BBFFBCD65C03685A7C31B6002AC52D14E2D68FE0DF5FA7FC07AC175DFFE224"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/manager/card_mgr.rs",
+                      "length":  6355,
+                      "sha256":  "17B9B23F4F66E04D279F3F263889BA002874939003C6749AA809BE9B24E23BB0"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/manager/entity_mgr.rs",
+                      "length":  3887,
+                      "sha256":  "79BFABC1AC1CE033AEC34B2F7C60720F13650BC19BCA2B43DB928200C880F83B"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/manager/fight_data_mgr.rs",
+                      "length":  10731,
+                      "sha256":  "C83C5395452AFD03971FA03D29DB44763B788AB1118D6348468020C3E946E63B"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/manager/mod.rs",
+                      "length":  193,
+                      "sha256":  "790870EAF51D042D4E78431D13ABAFBCE4E1170D7511F36FF381594AD6D45598"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/manager/round_mgr.rs",
+                      "length":  4342,
+                      "sha256":  "96CDA3D2D17AD7862C92A3B801CC4FC8FE4163D306CC12083DD5418516CA8FE8"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/manager/skill_mgr.rs",
+                      "length":  826,
+                      "sha256":  "7FDFBF650031C444AD46FC35E4419128B680D4EAF113E09A1ADE47183B380EC2"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/manager/stage_mgr.rs",
+                      "length":  0,
+                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/mechanics/bloodtithe.rs",
+                      "length":  5786,
+                      "sha256":  "1BC1BDAAA995F8088DF588BCDBC2E991BF54AB47D1E7B2BF0AADFEBBF30CB8FE"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/mechanics/mod.rs",
+                      "length":  303,
+                      "sha256":  "6161FE10A6C00636C58A0BB5026BB53D7256DBE79A3C9273657C664F8703E4AB"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/mod.rs",
+                      "length":  1575,
+                      "sha256":  "98BC5122ECC877F3AA59CEDDEE2D0D40C98B3A7E9CE76FB519251A3B00AB41C5"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/passives/activity.rs",
+                      "length":  1588,
+                      "sha256":  "C87F55D33C0B1ED2119A1A6A934F65975B89EB3C696E1AE58299EE2376776882"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/passives/equipment.rs",
+                      "length":  2970,
+                      "sha256":  "C156C044B560F974B24319565614D1DF216072591B099480296669D8BDA19020"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/passives/hero_3088.rs",
+                      "length":  6339,
+                      "sha256":  "3E8E487BA56ED0EA399A69237C11E113F64CCF229FC3792FA40FC3981C8D356A"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/passives/hero_3120.rs",
+                      "length":  3401,
+                      "sha256":  "E2C601F6457049BD537E4CB9B7D6AC7EE84AA6AF1D3ACD7361CE27646E0C262C"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/passives/hero_3125.rs",
+                      "length":  3965,
+                      "sha256":  "595DB0135237BE28262715DFD1D41529369D8AF0346D933436D5C3140F1881B2"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/passives/mod.rs",
+                      "length":  1905,
+                      "sha256":  "9749C1E8484E8EDA4762A1841A1435141B9B6AB2E7ED1D8CB2DD1F705E9405C4"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/rewards.rs",
+                      "length":  2754,
+                      "sha256":  "47C0B34F5E1F6E09399022E95D279C2C13AE6F167A94C4456B12281E08B5A0D6"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/round.rs",
+                      "length":  5634,
+                      "sha256":  "0FEA7675B349F3362E762743DCD302DE704341769EC5AA4E1316B4666057C758"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/round_builder.rs",
+                      "length":  853,
+                      "sha256":  "C7E1F0999ED0F3AD876A89CB25EDC0115C3453B232232EBB3B09619036036FD2"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/simulator.rs",
+                      "length":  1783,
+                      "sha256":  "B29D866AB2B2BEF4A34352D5646DD65BA12450421169FDA67CC47FD9C988E9F2"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/skill_executor.rs",
+                      "length":  23858,
+                      "sha256":  "C6955DDC396F010B8DAB24465A911692F0307146E9C18FDC2E56BBF40610CE17"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/step_builder.rs",
+                      "length":  6780,
+                      "sha256":  "8B1C6ACA1780C6B80F338208F2130FDBAC7373D74623E1B08127F452877C522B"
+                  },
+                  {
+                      "path":  "gameserver/src/state/battle/utils.rs",
+                      "length":  7158,
+                      "sha256":  "0BBE2E59996FCEE8CFA80571483E5FEA2F9469FF3E0F299E5DD653BBC8CB6473"
+                  },
+                  {
+                      "path":  "gameserver/src/state/connection.rs",
+                      "length":  12662,
+                      "sha256":  "1864B6C72434802FA4A76ED8B0199EE291559CCA312129CD62BAFAA1FF86C002"
+                  },
+                  {
+                      "path":  "gameserver/src/state/gacha/helpers.rs",
+                      "length":  8400,
+                      "sha256":  "9F87CD54311C284A3EE22042E76C2AB23399C791FCCF57FE098678B25DA4EC50"
+                  },
+                  {
+                      "path":  "gameserver/src/state/gacha/mod.rs",
+                      "length":  2688,
+                      "sha256":  "F414B2DD639B9652FE278FC9DB306D17C343B9ED8EB91116D8A575564AF47965"
+                  },
+                  {
+                      "path":  "gameserver/src/state/gacha/result.rs",
+                      "length":  404,
+                      "sha256":  "619E5F061AF82868D9FCB83A1A5CCACEB4D1150441DF44545C7DF95BDEBDC92D"
+                  },
+                  {
+                      "path":  "gameserver/src/state/gacha/rewards.rs",
+                      "length":  689,
+                      "sha256":  "9B069423FD6A7C4751DA05D801BF55408981758657D8F3665ADB0688E49EDF08"
+                  },
+                  {
+                      "path":  "gameserver/src/state/gacha/state.rs",
+                      "length":  7396,
+                      "sha256":  "6B4FD0CFEC3388C6EC225B4F830341744C6A4CE51DF3AA6D594FB7FF73A0626D"
+                  },
+                  {
+                      "path":  "gameserver/src/state/mod.rs",
+                      "length":  639,
+                      "sha256":  "8A2AA5BDD2DE4AC9E90F26BDE8BFD927E910B51D892400CC02DD8AA31EEBFF75"
+                  },
+                  {
+                      "path":  "gameserver/src/state/packet.rs",
+                      "length":  512,
+                      "sha256":  "A2CAD53BE9B27E54679F6FE56A2A90AF1839FA86691922EEC3DC8203FA37599F"
+                  },
+                  {
+                      "path":  "gameserver/src/state/player.rs",
+                      "length":  4319,
+                      "sha256":  "7ECDDB8F34AAD62FE331E46EB69071F3304D93ADB2F97384A1D074E68DE28E3F"
+                  },
+                  {
+                      "path":  "gameserver/src/util/common.rs",
+                      "length":  1605,
+                      "sha256":  "E9F189EB56BD8F988763977B9CC98D1382FD7BD2A24C4EFA29052111C6C84577"
+                  },
+                  {
+                      "path":  "gameserver/src/util/data_loader.rs",
+                      "length":  2817,
+                      "sha256":  "C4C0C67E12CC915437BF21E0B9B262556E37A2DABF0566068CE15047B5FEE9D9"
+                  },
+                  {
+                      "path":  "gameserver/src/util/inventory.rs",
+                      "length":  857,
+                      "sha256":  "1123987C387E4E3306D052A304B2F9DB5151EDE39FE582219BCC23571022801A"
+                  },
+                  {
+                      "path":  "gameserver/src/util/mod.rs",
+                      "length":  74,
+                      "sha256":  "780C3F8949B50421BFE7EEE804B8B5FAB900126B1F4CAE8A0450A860D69FE69E"
+                  },
+                  {
+                      "path":  "gameserver/src/util/push.rs",
+                      "length":  12817,
+                      "sha256":  "BE0B156E4E4BB8C458050BD466120385266289C02A8B9F8D477E0F40323B5787"
+                  },
+                  {
+                      "path":  "images/r99-email.png",
+                      "length":  50015,
+                      "sha256":  "9E3EC19D4E8326109F56D5E617BF49BD13F15A2DC1BA54C8D4CA946B9DB85A7B"
+                  },
+                  {
+                      "path":  "images/r99-heroes.png",
+                      "length":  1672813,
+                      "sha256":  "8DF8D9ECEED0BA8D7257CB0509D9AD7156AE2389F992E3959677E899C682FA37"
+                  },
+                  {
+                      "path":  "images/r99-murc.png",
+                      "length":  2795026,
+                      "sha256":  "ED945AC9D0586794A234D01345DAA992EFCC82A98233C66FBF9D489457A37F4B"
+                  },
+                  {
+                      "path":  "lib/config/build.rs",
+                      "length":  1610,
+                      "sha256":  "43ADC1CED1314B1CF96B7F530B88D9DA738C4BD44E0F58441ABB4C664F2F6B3A"
+                  },
+                  {
+                      "path":  "lib/config/Cargo.toml",
+                      "length":  357,
+                      "sha256":  "E00270C0412B0A4842B5E5E239605CC7DB2D8AB185BDA1CA73062260F362A0F2"
+                  },
+                  {
+                      "path":  "lib/config/configs/activity101.rs",
+                      "length":  1670,
+                      "sha256":  "3F042C729E7D81FE3CA5316C00D2177018BAD3DEE3E682BC153F7B9C3B57F925"
+                  },
+                  {
+                      "path":  "lib/config/configs/activity174_role.rs",
+                      "length":  2516,
+                      "sha256":  "42F9E5B8A661ACE6C2823055A0381A3EC9A4A6AB39E71AEF3AF04169D9DD1E39"
+                  },
+                  {
+                      "path":  "lib/config/configs/activity191_role.rs",
+                      "length":  2572,
+                      "sha256":  "BAAE05C7F953753C96C33CB34CC3B0373EDDDDF899D4C9797E7CACE03D5F3A7B"
+                  },
+                  {
+                      "path":  "lib/config/configs/antique.rs",
+                      "length":  1879,
+                      "sha256":  "1CB280B8DF21DB69689946B1B5CF0291230931DF010C9C5998B15E77CF78ABFB"
+                  },
+                  {
+                      "path":  "lib/config/configs/battle.rs",
+                      "length":  4409,
+                      "sha256":  "1952BF83153DF9E7F909A85823724FA91C0EE99677D3BE72AF4E63543E4DE1FF"
+                  },
+                  {
+                      "path":  "lib/config/configs/bgm_switch.rs",
+                      "length":  2388,
+                      "sha256":  "C98364EFD70A87087A386B764A31B8D30F192A9563542FABA17766FF3A56518A"
+                  },
+                  {
+                      "path":  "lib/config/configs/bonus.rs",
+                      "length":  1929,
+                      "sha256":  "0DA57052038C7C123F7664C7E188973B3047A5BB4519397229153D762DFAAA4D"
+                  },
+                  {
+                      "path":  "lib/config/configs/bp.rs",
+                      "length":  2499,
+                      "sha256":  "C07D4BEDC2CBE6CDDD50BA25334561636F1F95E700539BBF54E34CAA5C67E583"
+                  },
+                  {
+                      "path":  "lib/config/configs/bp_des.rs",
+                      "length":  1852,
+                      "sha256":  "18213E9FFFC451271230297F5572EC691579A50D82B49CCC8C4F59B506827C46"
+                  },
+                  {
+                      "path":  "lib/config/configs/bp_lv_bonus.rs",
+                      "length":  1690,
+                      "sha256":  "E7EDAC6193FB95E9F3B22CD31ED1557C98602C9BB9542B93B35F11D92223964A"
+                  },
+                  {
+                      "path":  "lib/config/configs/bp_task.rs",
+                      "length":  2662,
+                      "sha256":  "07F9A611053A666CF725CDF9FD6B595E47D442E67A64411D2C387406973A0D9D"
+                  },
+                  {
+                      "path":  "lib/config/configs/chapter.rs",
+                      "length":  3169,
+                      "sha256":  "D2562102CB5F4D267F82407570D422B7592F1405E879127D70146F5A64F3A41C"
+                  },
+                  {
+                      "path":  "lib/config/configs/character.rs",
+                      "length":  3188,
+                      "sha256":  "2A1060A5964E59F22003B785A21B01A446187DC039A95B22395893D2BAF54B44"
+                  },
+                  {
+                      "path":  "lib/config/configs/character_cosume.rs",
+                      "length":  1245,
+                      "sha256":  "FFBC0EB8C8B67B57D0F74948182A8D98959B7577D9DDAB82FBC47A9DF2BDFF70"
+                  },
+                  {
+                      "path":  "lib/config/configs/character_destiny.rs",
+                      "length":  1360,
+                      "sha256":  "7771165F08AAA98082636C7395035E0744A495B8725EEA4A26F14EA6FA181B9D"
+                  },
+                  {
+                      "path":  "lib/config/configs/character_destiny_facets.rs",
+                      "length":  1498,
+                      "sha256":  "7E06709E7075DB92EE7E8965F2862D58DCFFF1E88C5F9D9CDA2F50898D58990B"
+                  },
+                  {
+                      "path":  "lib/config/configs/character_level.rs",
+                      "length":  1470,
+                      "sha256":  "3437D258623F29AE7C5329940F9118761CD84F691456D7C4B59FD400E9BD426D"
+                  },
+                  {
+                      "path":  "lib/config/configs/character_rank.rs",
+                      "length":  1319,
+                      "sha256":  "8316E900FFA6AC8D2ADC7D80CF426FFAACCC08920E4C40CD544FED587A4C567E"
+                  },
+                  {
+                      "path":  "lib/config/configs/character_rank_replace.rs",
+                      "length":  1850,
+                      "sha256":  "E1335DA92DFAE8A08CFD30B5A3654FA3EFA0BD5CB8942F06A7BE314F2157C450"
+                  },
+                  {
+                      "path":  "lib/config/configs/character_talent.rs",
+                      "length":  1436,
+                      "sha256":  "A42D27404CDE07B89CD8E514F80754099BB98E5759639364857B094D754EFF0B"
+                  },
+                  {
+                      "path":  "lib/config/configs/character_voice.rs",
+                      "length":  2538,
+                      "sha256":  "F3E99D68AD91B1F7F93A3BFD4302AEC05890B921269985AC00F1698F019258FD"
+                  },
+                  {
+                      "path":  "lib/config/configs/cloth_level.rs",
+                      "length":  2459,
+                      "sha256":  "6ABB1DDC32200F2D2902AB3FFBA9BFFA90A0277976BB5B9DFBB8774BBAB3AA96"
+                  },
+                  {
+                      "path":  "lib/config/configs/currency.rs",
+                      "length":  2279,
+                      "sha256":  "B9B8C0AB37A58FAB9EE20EF27F1EFCCB83107C084E7D8AE5E3C44BD50E15B683"
+                  },
+                  {
+                      "path":  "lib/config/configs/episode.rs",
+                      "length":  4586,
+                      "sha256":  "147DBFB415209AE8A652BF8C50EA75EC2230DEEC05A638D489ADDB41D8A471FC"
+                  },
+                  {
+                      "path":  "lib/config/configs/equip.rs",
+                      "length":  2317,
+                      "sha256":  "16BC22ED6D5BA181497EE284C8FB0808471D6EC406E8B37656FA14AF398BDD39"
+                  },
+                  {
+                      "path":  "lib/config/configs/equip_break_cost.rs",
+                      "length":  1358,
+                      "sha256":  "3D8B775B48949A6204954782E025C7E2B465EEB132377DEBF0B70D184AA56755"
+                  },
+                  {
+                      "path":  "lib/config/configs/equip_skill.rs",
+                      "length":  2406,
+                      "sha256":  "8794AA653106CEA61C01735DC9DCB53AD3522744A6038D403B1808D9993CE9CE"
+                  },
+                  {
+                      "path":  "lib/config/configs/equip_strengthen.rs",
+                      "length":  1320,
+                      "sha256":  "19054AF15F2BE51CF16AFF972650506EDA2CF28645E97E22DBA8DB1B70B5F26B"
+                  },
+                  {
+                      "path":  "lib/config/configs/equip_strengthen_cost.rs",
+                      "length":  1395,
+                      "sha256":  "C835F344184787D09453CC90E3198A642A1961E694236D51DC5B7142B3F618C6"
+                  },
+                  {
+                      "path":  "lib/config/configs/guide.rs",
+                      "length":  1784,
+                      "sha256":  "9482A227A0D7D4BC96F596F1451322515881C6445B947BE63EA5B41CB7A1682C"
+                  },
+                  {
+                      "path":  "lib/config/configs/hero_trial.rs",
+                      "length":  2330,
+                      "sha256":  "B661259676A98BB0EA8D853914B3168B2309FE2E031D71C1875B92082AAE36E0"
+                  },
+                  {
+                      "path":  "lib/config/configs/insight_item.rs",
+                      "length":  2001,
+                      "sha256":  "F3F5019C74931DF07FF5AD601191E62BC91A965E8FE52DA48A9921A7E5670B34"
+                  },
+                  {
+                      "path":  "lib/config/configs/item.rs",
+                      "length":  2445,
+                      "sha256":  "1B630E630F7250DE68F648A053F4BDA70473EF69E718F5FB2999B219571EF4D3"
+                  },
+                  {
+                      "path":  "lib/config/configs/mod.rs",
+                      "length":  16943,
+                      "sha256":  "80CE3C82BAEDA8F415735650930974FCAB97A80FF4D5B1B64EF11689CFA7E4E9"
+                  },
+                  {
+                      "path":  "lib/config/configs/monster.rs",
+                      "length":  2811,
+                      "sha256":  "7A2AD484CD9ADAFEF6AD39D74FB6BFD413BAAAE720F5152218C8B3EC8C337235"
+                  },
+                  {
+                      "path":  "lib/config/configs/monster_skill_template.rs",
+                      "length":  2460,
+                      "sha256":  "DDCAC000DCA1C694AF4353E80763CB30627C11143577E8AF1ABA725B1EEBB49A"
+                  },
+                  {
+                      "path":  "lib/config/configs/monster_template.rs",
+                      "length":  2311,
+                      "sha256":  "7CB6F7927F101C81CF5232C9E49A684469A00A43C39583A56B4532FE3DBF8252"
+                  },
+                  {
+                      "path":  "lib/config/configs/month_card.rs",
+                      "length":  2031,
+                      "sha256":  "906EC22E368AED6C74C308FB94BBF183EAA1255DCBB96388BBCC37FADCA36285"
+                  },
+                  {
+                      "path":  "lib/config/configs/open.rs",
+                      "length":  2271,
+                      "sha256":  "9E570FDE8E454D8EC31A47E1AD5B160F4DDFA55ABA2C68F901038FEB19045DDA"
+                  },
+                  {
+                      "path":  "lib/config/configs/power_item.rs",
+                      "length":  1992,
+                      "sha256":  "39745139830AF1E5282101DB5C7DC2F783BF86FE65FE20407D1044258591A302"
+                  },
+                  {
+                      "path":  "lib/config/configs/skill.rs",
+                      "length":  2221,
+                      "sha256":  "DE1FC9A2364BEFE3E057FDC944FA82F7BC40FB5251B4A9DA77B38306605A23AE"
+                  },
+                  {
+                      "path":  "lib/config/configs/skill_behavior.rs",
+                      "length":  1866,
+                      "sha256":  "25B6B909F42D34B5A82CE0D1BF0F12D82D801493FE622FFCB43F9DFB458037CA"
+                  },
+                  {
+                      "path":  "lib/config/configs/skill_buff.rs",
+                      "length":  2756,
+                      "sha256":  "7E4E4656EE71E223E1CE03D99DA9E43C4355CF1BFD5834A6A0CFE58ADE8C2BC9"
+                  },
+                  {
+                      "path":  "lib/config/configs/skill_effect.rs",
+                      "length":  8433,
+                      "sha256":  "BFA663C0482190CDE8441D108120C7F659EE2136B7B6DA3DFFB7266B759E3B91"
+                  },
+                  {
+                      "path":  "lib/config/configs/skill_ex_level.rs",
+                      "length":  1638,
+                      "sha256":  "8766F592892198D22333878C11EC1428EE948BEB72FDA8CC8031F76025446B4E"
+                  },
+                  {
+                      "path":  "lib/config/configs/skill_passive_level.rs",
+                      "length":  1512,
+                      "sha256":  "A060ACFDA2DDFDAE059D428E292BC636A9BBFD0A59DC0F3B5306DCA7A48E8A58"
+                  },
+                  {
+                      "path":  "lib/config/configs/skin.rs",
+                      "length":  7755,
+                      "sha256":  "33B8BB68BE3293882D039952DA20005ACDC7D4FFAE87E06D14A9D8466F20D006"
+                  },
+                  {
+                      "path":  "lib/config/configs/store_charge_goods.rs",
+                      "length":  4023,
+                      "sha256":  "3B572EA1877FEC9AD2F53652074BBCC20825EB3EDD203A60B5FF4ADF92A8B80A"
+                  },
+                  {
+                      "path":  "lib/config/configs/store_charge_optional.rs",
+                      "length":  1819,
+                      "sha256":  "E57CD9C252F64978F687EE002E1B29D81B150DAB287C0D5C2C19E9287B083F64"
+                  },
+                  {
+                      "path":  "lib/config/configs/store_goods.rs",
+                      "length":  3622,
+                      "sha256":  "D22AFCDF0F38494DD5C0F9F4822B4A75475925FB811B8CDA6A915A8D121E3CD5"
+                  },
+                  {
+                      "path":  "lib/config/configs/summon.rs",
+                      "length":  1668,
+                      "sha256":  "064D81F0133EDBAA62ECFB8B64F45CBD4E24A12A4E05D597CB18A4E73DAAD7A8"
+                  },
+                  {
+                      "path":  "lib/config/configs/summon_pool.rs",
+                      "length":  4705,
+                      "sha256":  "0481F0C85DDA8012BDF51CD02BDABA832C5A50CC43BFACCB3DC12874A56A1658"
+                  },
+                  {
+                      "path":  "lib/config/configs/talent_scheme.rs",
+                      "length":  1410,
+                      "sha256":  "613E4401B06601023F48E59866A85CDD94FEF6E016689D3F5E3EEA08C028AE82"
+                  },
+                  {
+                      "path":  "lib/config/configs/talent_style_cost.rs",
+                      "length":  1317,
+                      "sha256":  "8511687406DCD70428980A053679DFFC0810CA39E6C69744FEA6BF4FEC331EC0"
+                  },
+                  {
+                      "path":  "lib/config/excel_confgen/emit_file.rs",
+                      "length":  567,
+                      "sha256":  "014C63ED74DF537430E5E3573415EE8FDFC19A5DFBC3B92C787F368DB3D57EAC"
+                  },
+                  {
+                      "path":  "lib/config/excel_confgen/emit_root.rs",
+                      "length":  3342,
+                      "sha256":  "BD0F0C5C49B0D16C6E06918223F37E3896EB091CF93187F4A14A9457A92A0849"
+                  },
+                  {
+                      "path":  "lib/config/excel_confgen/emit_struct.rs",
+                      "length":  970,
+                      "sha256":  "42ECF207CDCBE1D2C0ACA0F3828D88A6CE0E8E653F53989116003F0C3112F9F2"
+                  },
+                  {
+                      "path":  "lib/config/excel_confgen/emit_table.rs",
+                      "length":  7999,
+                      "sha256":  "3F167881CEEF533C6D533D26463466BF7390DAA184E622ED7669B7EE744A6EFE"
+                  },
+                  {
+                      "path":  "lib/config/excel_confgen/mod.rs",
+                      "length":  253,
+                      "sha256":  "1359794C1BFF3FAAFAD7CF4A12F6EC6680922648D275ACB5860AEAAAA5AFAB4B"
+                  },
+                  {
+                      "path":  "lib/config/excel_confgen/pipeline.rs",
+                      "length":  1985,
+                      "sha256":  "16A17A81B1492B3026AA6B24B2C02E871DD35A1DEABAEAB6A430D19936816F73"
+                  },
+                  {
+                      "path":  "lib/config/excel_confgen/rust_ident.rs",
+                      "length":  1283,
+                      "sha256":  "C3149EFAEEE7609709719881DF0E1BECB09EB795208D4AECAE9C7ED222784B06"
+                  },
+                  {
+                      "path":  "lib/config/excel_confgen/rust_types.rs",
+                      "length":  677,
+                      "sha256":  "72C9C8CFC60206DDBE15DAFD5C7910354ACDC8BEA165E3AE12C0D02627ACFE66"
+                  },
+                  {
+                      "path":  "lib/config/excel_confgen/schema_infer.rs",
+                      "length":  1091,
+                      "sha256":  "7100796911C87DC9BCF89B48A77428DDAFF31C64F59ECE8EE20C959690F3D674"
+                  },
+                  {
+                      "path":  "lib/config/excel_confgen/schema_inspect.rs",
+                      "length":  1379,
+                      "sha256":  "00614BF699ACE7CFEF72D4DC69541D61B6797C7D05058CDF072E19585A072545"
+                  },
+                  {
+                      "path":  "lib/config/excel_confgen/tables.rs",
+                      "length":  1142,
+                      "sha256":  "AE254E2D0DAF92DB3B509AAD8B5BA3544CEE09F387C9EFC5779B2E2B0A0D6DF4"
+                  },
+                  {
+                      "path":  "lib/config/src/lib.rs",
+                      "length":  116,
+                      "sha256":  "965F0364D942C8565153CCB94BFC8FAFB7A311440A23AE578B8E4145F53D91FB"
+                  },
+                  {
+                      "path":  "protocol/build.rs",
+                      "length":  806,
+                      "sha256":  "1F1B1FC3D027627980BBD2B32EE0AC2F5016ADA807B66EB873F5C95F8962A8AF"
+                  },
+                  {
+                      "path":  "protocol/Cargo.toml",
+                      "length":  288,
+                      "sha256":  "A87F076DE4BE0A0FD8A009BFFBDC1A822A87B8B574438E3FFC3DCC03053168CB"
+                  },
+                  {
+                      "path":  "protocol/include/_.rs",
+                      "length":  1699771,
+                      "sha256":  "DBA2681CEFAD8E6365C1FF60FD772C379BD1C2B92F10F1A83C08CCA9EBB533C1"
+                  },
+                  {
+                      "path":  "protocol/src/lib.rs",
+                      "length":  48,
+                      "sha256":  "4B715A26BF2CDB7F4C19DAF860FAF88939C88D41A0CB70C0DF9EC3EB528212D2"
+                  },
+                  {
+                      "path":  "README.md",
+                      "length":  6535,
+                      "sha256":  "5BB7D4804C1D236A36BC0769D156FA16B39C78A31E548C14B7A3CCB8F9B618BE"
+                  },
+                  {
+                      "path":  "rust-toolchain.toml",
+                      "length":  45,
+                      "sha256":  "3ED190D7574278D3E960B65DE70F58BEF8400D410A859C0F5DAEF6746B39D1DB"
+                  },
+                  {
+                      "path":  "scripts/Enable-AllBanners.ps1",
+                      "length":  4686,
+                      "sha256":  "86BE34CFA922B1616FE92E46092B93701D98EC9F770E678DA1B786BF7F6935D7"
+                  },
+                  {
+                      "path":  "scripts/Enable-CurrentNonReprintBanners.ps1",
+                      "length":  758,
+                      "sha256":  "9A54AF7700BCA281080E1F3E0E7988A55190DA3333F1E5B0FB39A1B9A96D11D4"
+                  },
+                  {
+                      "path":  "scripts/Test-EnableAllBanners.ps1",
+                      "length":  3155,
+                      "sha256":  "B6D074E0BA7357043E49516A4C6AA3028E50F6BCBF4AA3269921F270BC414278"
+                  },
+                  {
+                      "path":  "scripts/Test-EnableCurrentNonReprintBanners.ps1",
+                      "length":  3004,
+                      "sha256":  "206E0367B76DCA56768FA3CB95A2BFD7F29853D4D4CA6B507A96BA7310B199FA"
+                  },
+                  {
+                      "path":  "sdkserver/Cargo.toml",
+                      "length":  534,
+                      "sha256":  "44DBE58CCD9B44EA7EB3B63B14D07EE7BBE30B4B0CB7C5E903DBC63D686F37AF"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/account/auto_login.rs",
+                      "length":  4639,
+                      "sha256":  "DDF6A3B81C8271173280CBCA237D139A1C658D161443584C004E90D996BF9B66"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/account/bind_list.rs",
+                      "length":  969,
+                      "sha256":  "0ACD2D79231DA5B1D4E10A5B00751AA7A2181840E3B313A0F5434496DC50C507"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/account/helpers.rs",
+                      "length":  10152,
+                      "sha256":  "8BD93D063B7DEE55BE7B42814094D0EC5383343BFB677219EBD13DBB77F22234"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/account/login_config.rs",
+                      "length":  378,
+                      "sha256":  "153387F2D1CB144B515DE465E477737C347656A2EEBED17C67B92D1FA748DE14"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/account/login_mail.rs",
+                      "length":  4060,
+                      "sha256":  "7DEB928353A4081D7F7AB278F9795841BC736F90DD96C1BB30FAB52B982455AB"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/account/login_verify.rs",
+                      "length":  3158,
+                      "sha256":  "9C548A0EE0D19E5E2E0EC5148FB27C82EACDA5032C4196652124FA90665EDE84"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/account/mod.rs",
+                      "length":  165,
+                      "sha256":  "AFE0E96E95EA3C7D01E59000BEAE94F8E4DC100C47E62BA561B51937A1382C0A"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/account/sdk_init.rs",
+                      "length":  2712,
+                      "sha256":  "EA4C2DDB7277E281B4512E33FFBB777BF56316D3805818183B27586E1371F11F"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/account/visitor_login.rs",
+                      "length":  4342,
+                      "sha256":  "F8B1B38AC74B27888113114EBB7DDE32D150C59B30D3ADD0E8E1E19102194073"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/game/c2s_session.rs",
+                      "length":  206,
+                      "sha256":  "7714E6CCC16E922249B144120C4D46D2308EE347F306F78F131CA35878F8E37D"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/game/config.rs",
+                      "length":  256,
+                      "sha256":  "E3F5369795AE266782A039D74A8E6E3D3022B0A2BA5E65ED98799509C2A3E641"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/game/mod.rs",
+                      "length":  232,
+                      "sha256":  "4D777AD3C01020A8977D9BDAC3B379B319DF768E23E46115BBE440F395A8353C"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/game/noticecp_config.rs",
+                      "length":  290,
+                      "sha256":  "76137A56CB30CA6DD57400336671ABC6A8DBFE89CFA9FA4532CEBBFECC672256"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/game/noticecp_query.rs",
+                      "length":  169795,
+                      "sha256":  "DBC794B03817623E0E5201C2AFF6BE4883EBF862CB864FE7343E745E7B675ED3"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/game/patch_version.rs",
+                      "length":  314,
+                      "sha256":  "F443D0EA08DAE797492B1D01CAC5B2C2436F6E9A4C38BABDF78D9615841F0F39"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/game/receiver_app.rs",
+                      "length":  91,
+                      "sha256":  "5AD65E3DC07120C693A30C8E73E6BA8A1373FB66B262DA9122B039860F4DF711"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/game/resource_check.rs",
+                      "length":  2185,
+                      "sha256":  "E14A7CCD15A4F9A59A72C2DFE788F3F783833B841D8DD021C68D175C1A248D92"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/game/sdk_pay.rs",
+                      "length":  1219,
+                      "sha256":  "BC4D879F056527539EEA53A2F8D03E30187D4257475A52B2737E4E814BEB6FA2"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/game/sdk_pay_complete.rs",
+                      "length":  1836,
+                      "sha256":  "145D577C5205137C039B5756E3BC56D67B5F24AA4E5D4022C12A8749F7553054"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/game/summon_query.rs",
+                      "length":  816,
+                      "sha256":  "3BBBEADD8DCC5534848EA6B31A7F3A5D4F5E6EC6ED23C316A43128B966CD7102"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/index.rs",
+                      "length":  269,
+                      "sha256":  "A5835701B57B51670A4F1337020B9D3889B8CAE75758DA41125B0A9BE6045C4A"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/jsp/load_zone.rs",
+                      "length":  2018,
+                      "sha256":  "787E9FF8DF08C5EA4CA55608787D0996EE98D641752FCE89B72BE293A119E0B3"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/jsp/login.rs",
+                      "length":  2400,
+                      "sha256":  "C477E2F3A13CD212682A0F3BBF0F324DDFE23528D09FC5CC5571B21B37E5513A"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/jsp/mod.rs",
+                      "length":  57,
+                      "sha256":  "1EB4BAC4A1251214D8F6177E6CA7528E3041467E076E8674D90E1F6C6B1B71DA"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/jsp/start_game.rs",
+                      "length":  399,
+                      "sha256":  "219D2C5BAF1C35D84A157ABF406BACD7E4208153764335F1FA40B6192A647A0A"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/mod.rs",
+                      "length":  76,
+                      "sha256":  "F4E1A108F644B2919BAD8D04C7FA998E267B445ECDE04EC5CB6F98135BA2D29B"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/router.rs",
+                      "length":  2117,
+                      "sha256":  "E8020FF6753C521DB9D8ECA4BF9534E3D97065B982AA78ECEFE3AF3AF781D1FB"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/trade/good_list.rs",
+                      "length":  847,
+                      "sha256":  "F54BCB148EA3B7C06611D9232ADFF6EC90752715D4D2B5D5011BFD2848A0F53D"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/trade/mod.rs",
+                      "length":  59,
+                      "sha256":  "B75672A2A2A8CC3C5B203D31E5B1A2A6386A6A88064740E44F3BDA3BA247A4EE"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/trade/order.rs",
+                      "length":  1132,
+                      "sha256":  "321EA43B57CCC48D61A5C858F565AE9543BDD99DA6BB0D5E46C3EE907B38DA83"
+                  },
+                  {
+                      "path":  "sdkserver/src/handlers/trade/payment_list.rs",
+                      "length":  1359,
+                      "sha256":  "75E9FCB69E297EEB995D30A97712FA70F5C122E4AA73D0CE25B88F8363FC2099"
+                  },
+                  {
+                      "path":  "sdkserver/src/main.rs",
+                      "length":  2684,
+                      "sha256":  "533E60B474B50ECF9FA17B7368DD0AFC7572CB0700D30752946EB133A3C8DE0F"
+                  },
+                  {
+                      "path":  "sdkserver/src/middleware/crypto.rs",
+                      "length":  3288,
+                      "sha256":  "85B11489A63B7CA847D5046E724A2C441F5D0121D2A09E883BA6DB48FBD721F8"
+                  },
+                  {
+                      "path":  "sdkserver/src/middleware/logging.rs",
+                      "length":  2482,
+                      "sha256":  "D82E24ABB0CDA06EADEF1D3C0485C7AE00CC344565DC5E493E5807BD66919638"
+                  },
+                  {
+                      "path":  "sdkserver/src/middleware/mod.rs",
+                      "length":  35,
+                      "sha256":  "D3B32AC33DD1CCF4057A07B180C187CF0ECD53C2CCE1F502B084172657989B11"
+                  },
+                  {
+                      "path":  "sdkserver/src/models/mod.rs",
+                      "length":  37,
+                      "sha256":  "B2440EDEFC0BF64A33ED81371CD194968DE972C1CACEE577D269EBFAA9194A6E"
+                  },
+                  {
+                      "path":  "sdkserver/src/models/request.rs",
+                      "length":  6078,
+                      "sha256":  "FBAAB813ABFBBFE808B7C64A4CE0AAA4144FAB08E7E8679D19AAD0376B67FA79"
+                  },
+                  {
+                      "path":  "sdkserver/src/models/response.rs",
+                      "length":  11082,
+                      "sha256":  "BDECCFCE90C14F287374C7C4D86A2D202DDC6F59DAF635D75EB7F6D7F03C2D2C"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/app.js",
+                      "length":  26821,
+                      "sha256":  "4057423C28C2161221EB75B543C960B278788F4EB3963796FEB4FBA262E20163"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/Apply-BannerPreset.ps1",
+                      "length":  11387,
+                      "sha256":  "0BF7CE814DE96BB2F29852116CBF8BF4C1D212531D2A3F5EB786FFCAB1C43522"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/examples/all-collaboration.json",
+                      "length":  622,
+                      "sha256":  "F24BADB89428334C68EAA3D4C235B1FC10C747C6285B3F9FF2552707DE1F63DE"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/index.html",
+                      "length":  10069,
+                      "sha256":  "F087BBBA41000349440D38DBE96F48F2923D298F4F756AD377904BD5EFEB9F4D"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/New-DefaultAllCharactersSummon.ps1",
+                      "length":  9854,
+                      "sha256":  "04D0F6DC86D74CFDB10859601C1AE7F8300C569BCA8912F26F4421F9B9E34014"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/presets/default-all-characters/README.md",
+                      "length":  2753,
+                      "sha256":  "3E6C7F6760961580F5833633CE5F26F8BEF4D31E0D86682A8BA04F4430C68D93"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/presets/default-all-characters/summon.json",
+                      "length":  195448,
+                      "sha256":  "E04804536C8B961B32E64B4FFAD790E2F7A05FF9CAFA9A17022198C4C0D16518"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/README.md",
+                      "length":  3947,
+                      "sha256":  "E42E9B5E86A43889977CCFBF556A14871874A22A11A64E83A1F1A8F085E83313"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/scheduler.js",
+                      "length":  16546,
+                      "sha256":  "0661402542A2B9F5D3C80578010F2F5CD0085D427AB1DEF9F434E5097BB2E66E"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/styles.css",
+                      "length":  8869,
+                      "sha256":  "C70A8D6DC066C36B3C06C99C986091DBE2D66E2633C3CF479072A2162267F85E"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/tests/example.test.js",
+                      "length":  733,
+                      "sha256":  "E58AF256AC8C5BA9A9C0C41AA1AED55ED525D3C562C3428AA85AF303A4ADE0F1"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/tests/page-contract.test.js",
+                      "length":  1351,
+                      "sha256":  "E0BED3B1F8BC6F716E06844BC19438C54C40E88E04B7D76716A38B72174FA94B"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/tests/scheduler.test.js",
+                      "length":  10368,
+                      "sha256":  "68B5D456DEA4150A1A4B188797B6BAB38DB7FE77DC36823AA162EE3A91267B47"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/tests/Test-ApplyBannerPreset.ps1",
+                      "length":  8955,
+                      "sha256":  "5DE23E625179FBB8FE81F6B0705023222B186DD85B86025C3D9FFBF0777E51B2"
+                  },
+                  {
+                      "path":  "tools/banner-scheduler/tests/Test-DefaultAllCharactersSummon.ps1",
+                      "length":  8057,
+                      "sha256":  "9B9658206FC2AE75BCB11548DC099D5D00054107C947636228B29555F3806CC0"
+                  },
+                  {
+                      "path":  "tools/optional-resource-cache/README.md",
+                      "length":  1264,
+                      "sha256":  "A87A9FF27C3ADE97E3B9647ACD1F8EE47F51557F0EFCBB8706029E8286F4CE71"
+                  },
+                  {
+                      "path":  "tools/optional-resource-cache/Save-OptionalResources.ps1",
+                      "length":  12391,
+                      "sha256":  "F4429674D3BCD8098BA785357E71FBA16DF66EDD2B3691D6D68D508B8437F933"
+                  },
+                  {
+                      "path":  "tools/optional-resource-cache/tests/Test-SaveOptionalResources.ps1",
+                      "length":  5778,
+                      "sha256":  "EF0FE13FD88113708582A5A8DF3D34A345C1DCA81C2BC0ED45886EFD36A93E0D"
+                  }
+              ]
+}

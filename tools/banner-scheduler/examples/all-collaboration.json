@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "presetName": "All international 3.6 collaborations",
+  "generatedAt": "2026-07-15T03:00:00.000Z",
+  "source": {
+    "fileName": "summon_pool.json",
+    "poolCount": 210
+  },
+  "schedule": {
+    "mode": "simultaneous",
+    "timezone": "Asia/Shanghai",
+    "startDate": "2026-07-15",
+    "daysPerBatch": null,
+    "poolsPerBatch": null
+  },
+  "pools": [
+    {
+      "poolId": 305121,
+      "order": 0,
+      "onlineTime": 1784044800,
+      "offlineTime": 2147483647
+    },
+    {
+      "poolId": 305111,
+      "order": 1,
+      "onlineTime": 1784044800,
+      "offlineTime": 2147483647
+    }
+  ]
+}

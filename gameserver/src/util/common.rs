@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use crate::network::packet::ServerPacket;
+use crate::network::packet::{CompatibilityCommand, ServerPacket};
 use sonettobuf::{CmdId, prost::Message};
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
@@ -26,6 +26,26 @@ pub async fn send_raw_server_message(
 ) -> Result<(), AppError> {
     let packet = ServerPacket {
         cmd_id: cmd_id as i16,
+        result_code: result_code as u16,
+        up_tag,
+        down_tag,
+        data: payload,
+    };
+
+    socket.write_all(&packet.encode()).await?;
+    Ok(())
+}
+
+pub(crate) async fn send_compatibility_server_message(
+    socket: &mut TcpStream,
+    command: CompatibilityCommand,
+    payload: Vec<u8>,
+    result_code: i16,
+    up_tag: u8,
+    down_tag: u8,
+) -> Result<(), AppError> {
+    let packet = ServerPacket {
+        cmd_id: command.raw_id(),
         result_code: result_code as u16,
         up_tag,
         down_tag,

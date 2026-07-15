@@ -18,5 +18,5 @@ pub use gacha::{
     load_gacha_state, parse_item, parse_store_product, save_gacha_state,
 };
 
-pub use packet::CommandPacket;
+pub(crate) use packet::CommandPacket;
 pub use player::PlayerState;

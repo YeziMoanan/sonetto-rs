@@ -1,10 +1,25 @@
 use crate::error::{AppError, CmdError};
 use crate::handlers::*;
-use crate::network::packet::ClientPacket;
+use crate::network::packet::{ClientPacket, CompatibilityCommand};
 use crate::state::ConnectionContext;
 use sonettobuf::CmdId;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+
+#[derive(Clone, Copy)]
+enum RawCommandPolicy {
+    StaticSuccessReply {
+        command: CompatibilityCommand,
+        body: &'static [u8],
+    },
+}
+
+fn raw_command_policy(cmd_id: i16) -> Option<RawCommandPolicy> {
+    CompatibilityCommand::from_raw_id(cmd_id).map(|command| RawCommandPolicy::StaticSuccessReply {
+        command,
+        body: command.success_body(),
+    })
+}
 
 macro_rules! dispatch {
     ($cmd_id:expr, $ctx:expr, $packet:expr, {
@@ -24,6 +39,26 @@ pub async fn dispatch_command(
     req: &[u8],
 ) -> Result<(), AppError> {
     let req = ClientPacket::decode(req)?;
+
+    if let Some(policy) = raw_command_policy(req.cmd_id) {
+        match policy {
+            RawCommandPolicy::StaticSuccessReply { command, body } => {
+                tracing::info!(
+                    "Received compatibility command: {} (raw ID {}); replying with static success body ({} bytes)",
+                    command.name(),
+                    command.raw_id(),
+                    body.len()
+                );
+                ctx.lock()
+                    .await
+                    .send_compatibility_reply(command, body.to_vec(), 0, req.up_tag)
+                    .await?;
+            }
+        }
+
+        return Ok(());
+    }
+
     let cmd_id = TryInto::<CmdId>::try_into(req.cmd_id as i32)
         .map_err(|_| AppError::Cmd(CmdError::UnregisteredCmd(req.cmd_id)))?;
 
@@ -193,6 +228,7 @@ pub async fn dispatch_command(
         CmdId::GetUnlockVoucherInfoCmd => voucher::on_get_unlock_voucher_info,
         CmdId::GetWeekwalkInfoCmd => weekwalk::on_get_weekwalk_info,
         CmdId::WeekwalkVer2GetInfoCmd => weekwalk::on_weekwalk_ver2_get_info,
+        CmdId::BeforeStartWeekwalkBattleCmd => weekwalk::on_before_start_weekwalk_battle,
         CmdId::GetCommandPostInfoCmd => command_post::on_get_command_post_info,
         CmdId::GetTurnbackInfoCmd => turnback::on_get_turnback_info,
         CmdId::GetPowerMakerInfoCmd => power_maker::on_get_power_maker_info,
@@ -233,4 +269,208 @@ pub async fn dispatch_command(
     });
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{dispatch_command, raw_command_policy, RawCommandPolicy};
+    use crate::error::{AppError, CmdError};
+    use crate::network::packet::{ClientPacket, ServerPacket};
+    use crate::state::{AppState, ConnectionContext};
+    use sonettobuf::{
+        prost::Message, BeforeStartWeekwalkBattleReply, BeforeStartWeekwalkBattleRequest, CmdId,
+    };
+    use sqlx::sqlite::SqlitePoolOptions;
+    use std::sync::Arc;
+    use tokio::io::AsyncReadExt;
+    use tokio::net::{TcpListener, TcpStream};
+    use tokio::sync::Mutex;
+    use tokio::time::{timeout, Duration};
+
+    async fn test_connection() -> (Arc<Mutex<ConnectionContext>>, TcpStream) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let (client, server) = tokio::join!(TcpStream::connect(address), listener.accept());
+        let client = client.unwrap();
+        let (server, _) = server.unwrap();
+
+        let db = SqlitePoolOptions::new()
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+        let state = Arc::new(AppState::new(db));
+        let context = ConnectionContext::new(Arc::new(Mutex::new(server)), state);
+
+        (Arc::new(Mutex::new(context)), client)
+    }
+
+    #[test]
+    fn compatibility_policies_have_exact_static_success_bodies() {
+        for (raw_id, expected_body) in [
+            (20144, &[][..]),
+            (13540, &[0x0A, 0x00][..]),
+            (-16527, &[][..]),
+        ] {
+            let RawCommandPolicy::StaticSuccessReply { command, body } =
+                raw_command_policy(raw_id).expect("missing compatibility policy");
+
+            assert_eq!(command.raw_id(), raw_id);
+            assert_eq!(body, expected_body);
+        }
+    }
+
+    #[tokio::test]
+    async fn raw_20144_returns_empty_success_reply() {
+        let (ctx, mut client) = test_connection().await;
+        let consumed_down_tag = ctx.lock().await.state.reserve_down_tag().await;
+        let request = ClientPacket {
+            sequence: 1,
+            cmd_id: 20144,
+            up_tag: 37,
+            data: Vec::new(),
+        }
+        .encode();
+
+        dispatch_command(Arc::clone(&ctx), &request).await.unwrap();
+        ctx.lock().await.flush_send_queue().await.unwrap();
+
+        let mut encoded_reply = vec![0; ServerPacket::PACKET_HEADER];
+        timeout(
+            Duration::from_secs(1),
+            client.read_exact(&mut encoded_reply),
+        )
+        .await
+        .expect("timed out waiting for compatibility reply")
+        .unwrap();
+        let reply = ServerPacket::decode(&encoded_reply).unwrap();
+
+        assert_eq!(reply.cmd_id, 20144);
+        assert_eq!(reply.result_code, 0);
+        assert_eq!(reply.up_tag, 37);
+        assert_eq!(reply.down_tag, consumed_down_tag + 1);
+        assert!(reply.data.is_empty());
+    }
+
+    #[tokio::test]
+    async fn raw_13540_returns_present_empty_tower_compose_info() {
+        let (ctx, mut client) = test_connection().await;
+        let consumed_down_tag = ctx.lock().await.state.reserve_down_tag().await;
+        let request = ClientPacket {
+            sequence: 1,
+            cmd_id: 13540,
+            up_tag: 38,
+            data: vec![0x08, 0x01],
+        }
+        .encode();
+
+        dispatch_command(Arc::clone(&ctx), &request).await.unwrap();
+        ctx.lock().await.flush_send_queue().await.unwrap();
+
+        let mut encoded_reply = vec![0; ServerPacket::PACKET_HEADER + 2];
+        timeout(
+            Duration::from_secs(1),
+            client.read_exact(&mut encoded_reply),
+        )
+        .await
+        .expect("timed out waiting for compatibility reply")
+        .unwrap();
+        let reply = ServerPacket::decode(&encoded_reply).unwrap();
+
+        assert_eq!(reply.cmd_id, 13540);
+        assert_eq!(reply.result_code, 0);
+        assert_eq!(reply.up_tag, 38);
+        assert_eq!(reply.down_tag, consumed_down_tag + 1);
+        assert_eq!(reply.data, [0x0A, 0x00]);
+    }
+
+    #[tokio::test]
+    async fn raw_negative_16527_returns_empty_party_server_list() {
+        let (ctx, mut client) = test_connection().await;
+        let consumed_down_tag = ctx.lock().await.state.reserve_down_tag().await;
+        let request = ClientPacket {
+            sequence: 1,
+            cmd_id: -16527,
+            up_tag: 39,
+            data: Vec::new(),
+        }
+        .encode();
+
+        dispatch_command(Arc::clone(&ctx), &request).await.unwrap();
+        ctx.lock().await.flush_send_queue().await.unwrap();
+
+        let mut encoded_reply = vec![0; ServerPacket::PACKET_HEADER];
+        timeout(
+            Duration::from_secs(1),
+            client.read_exact(&mut encoded_reply),
+        )
+        .await
+        .expect("timed out waiting for PartyMatch.PartyServerListReply")
+        .unwrap();
+        let reply = ServerPacket::decode(&encoded_reply).unwrap();
+
+        assert_eq!(reply.cmd_id, -16527);
+        assert_eq!(reply.result_code, 0);
+        assert_eq!(reply.up_tag, 39);
+        assert_eq!(reply.down_tag, consumed_down_tag + 1);
+        assert!(reply.data.is_empty());
+    }
+
+    #[tokio::test]
+    async fn before_start_weekwalk_battle_echoes_requested_element_and_layer() {
+        let (ctx, mut client) = test_connection().await;
+        let consumed_down_tag = ctx.lock().await.state.reserve_down_tag().await;
+        let request_body = BeforeStartWeekwalkBattleRequest {
+            element_id: Some(4321),
+            layer_id: Some(7),
+        }
+        .encode_to_vec();
+        let request = ClientPacket {
+            sequence: 1,
+            cmd_id: CmdId::BeforeStartWeekwalkBattleCmd as i16,
+            up_tag: 40,
+            data: request_body,
+        }
+        .encode();
+
+        dispatch_command(Arc::clone(&ctx), &request).await.unwrap();
+        ctx.lock().await.flush_send_queue().await.unwrap();
+
+        let mut encoded_reply = vec![0; ServerPacket::PACKET_HEADER + 5];
+        timeout(
+            Duration::from_secs(1),
+            client.read_exact(&mut encoded_reply),
+        )
+        .await
+        .expect("timed out waiting for BeforeStartWeekwalkBattleReply")
+        .unwrap();
+        let reply = ServerPacket::decode(&encoded_reply).unwrap();
+        let body = reply
+            .decode_message::<BeforeStartWeekwalkBattleReply>()
+            .unwrap();
+
+        assert_eq!(reply.cmd_id, CmdId::BeforeStartWeekwalkBattleCmd as i16);
+        assert_eq!(reply.result_code, 0);
+        assert_eq!(reply.up_tag, 40);
+        assert_eq!(reply.down_tag, consumed_down_tag + 1);
+        assert_eq!(body.element_id, Some(4321));
+        assert_eq!(body.layer_id, Some(7));
+    }
+
+    #[tokio::test]
+    async fn other_unregistered_raw_command_still_errors() {
+        let (ctx, _client) = test_connection().await;
+        let request = ClientPacket {
+            sequence: 1,
+            cmd_id: 20145,
+            up_tag: 37,
+            data: Vec::new(),
+        }
+        .encode();
+
+        let result = dispatch_command(ctx, &request).await;
+
+        assert!(matches!(
+            result,
+            Err(AppError::Cmd(CmdError::UnregisteredCmd(20145)))
+        ));
+    }
 }

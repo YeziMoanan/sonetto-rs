@@ -5,3 +5,4 @@ pub mod login_config;
 pub mod login_mail;
 pub mod login_verify;
 pub mod sdk_init;
+pub mod visitor_login;

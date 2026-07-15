@@ -38,6 +38,7 @@ router! {
     "/login/config" post login_config;
     "/login/mail" post login_mail;
     "/login/verify" post login_verify;
+    "/visitor/login" post visitor_login;
     "/sdk/init" post sdk_init;
 }
 

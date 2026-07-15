@@ -2,6 +2,60 @@ use super::super::error::{AppError, PacketError};
 use byteorder::{BE, ByteOrder};
 use sonettobuf::prost::Message;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct CompatibilityCommand(CompatibilityCommandKind);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum CompatibilityCommandKind {
+    CurrencyExchangeSameCurrency,
+    TowerComposeGetInfo,
+    PartyMatchPartyServerList,
+}
+
+impl CompatibilityCommand {
+    const ALL: [Self; 3] = [
+        Self(CompatibilityCommandKind::CurrencyExchangeSameCurrency),
+        Self(CompatibilityCommandKind::TowerComposeGetInfo),
+        Self(CompatibilityCommandKind::PartyMatchPartyServerList),
+    ];
+
+    pub(super) fn from_raw_id(raw_id: i16) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|command| command.raw_id() == raw_id)
+    }
+
+    pub(crate) const fn raw_id(self) -> i16 {
+        match self.0 {
+            CompatibilityCommandKind::CurrencyExchangeSameCurrency => 20144,
+            CompatibilityCommandKind::TowerComposeGetInfo => 13540,
+            CompatibilityCommandKind::PartyMatchPartyServerList => -16527,
+        }
+    }
+
+    pub(super) const fn name(self) -> &'static str {
+        match self.0 {
+            CompatibilityCommandKind::CurrencyExchangeSameCurrency => {
+                "Currency.ExchangeSameCurrencyRequest"
+            }
+            CompatibilityCommandKind::TowerComposeGetInfo => {
+                "TowerCompose.TowerComposeGetInfoRequest"
+            }
+            CompatibilityCommandKind::PartyMatchPartyServerList => {
+                "PartyMatch.PartyServerListRequest"
+            }
+        }
+    }
+
+    pub(super) const fn success_body(self) -> &'static [u8] {
+        match self.0 {
+            CompatibilityCommandKind::CurrencyExchangeSameCurrency => &[],
+            CompatibilityCommandKind::TowerComposeGetInfo => &[0x0A, 0x00],
+            CompatibilityCommandKind::PartyMatchPartyServerList => &[],
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct ServerPacket {
     pub cmd_id: i16,
@@ -128,5 +182,58 @@ impl ClientPacket {
         let decoded = T::decode(data)
             .map_err(|e| AppError::Packet(PacketError::ClientPacketDataDecodeFail(e)))?;
         Ok(decoded)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CompatibilityCommand;
+    use sonettobuf::CmdId;
+
+    #[test]
+    fn compatibility_command_mapping_is_exact() {
+        let currency_exchange = CompatibilityCommand::from_raw_id(20144).unwrap();
+        let tower_compose = CompatibilityCommand::from_raw_id(13540).unwrap();
+        let party_server_list = CompatibilityCommand::from_raw_id(-16527)
+            .expect("missing PartyMatch.PartyServerListRequest compatibility command");
+
+        assert_eq!(currency_exchange.raw_id(), 20144);
+        assert_eq!(
+            currency_exchange.name(),
+            "Currency.ExchangeSameCurrencyRequest"
+        );
+        assert_eq!(tower_compose.raw_id(), 13540);
+        assert_eq!(
+            tower_compose.name(),
+            "TowerCompose.TowerComposeGetInfoRequest"
+        );
+        assert_eq!(party_server_list.raw_id(), -16527);
+        assert_eq!(
+            party_server_list.name(),
+            "PartyMatch.PartyServerListRequest"
+        );
+        assert_eq!(party_server_list.success_body(), &[] as &[u8]);
+        assert!(CompatibilityCommand::from_raw_id(13539).is_none());
+        assert!(CompatibilityCommand::from_raw_id(13541).is_none());
+        assert!(CompatibilityCommand::from_raw_id(20143).is_none());
+        assert!(CompatibilityCommand::from_raw_id(20145).is_none());
+        assert!(CompatibilityCommand::from_raw_id(-16528).is_none());
+        assert!(CompatibilityCommand::from_raw_id(-16526).is_none());
+    }
+
+    #[test]
+    fn compatibility_commands_do_not_collide_with_registered_commands() {
+        let compatibility_raw_ids = CompatibilityCommand::ALL
+            .map(CompatibilityCommand::raw_id)
+            .to_vec();
+        assert_eq!(compatibility_raw_ids.as_slice(), &[20144, 13540, -16527]);
+
+        for raw_id in [20144, 13540, -16527] {
+            assert!(
+                CmdId::try_from(raw_id as i32).is_err(),
+                "compatibility raw command {} is now registered; remove its compatibility policy",
+                raw_id
+            );
+        }
     }
 }
