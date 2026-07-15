@@ -55,7 +55,7 @@ $binaryDirectory = Resolve-RequiredDirectory -Path (Join-Path $repo "target\$Pro
 $sdkBinary = Resolve-RequiredFile -Path (Join-Path $binaryDirectory "sdkserver.exe")
 $gameBinary = Resolve-RequiredFile -Path (Join-Path $binaryDirectory "gameserver.exe")
 $excelSource = Resolve-RequiredDirectory -Path (Join-Path $data "excel2json")
-$staticSource = Resolve-RequiredDirectory -Path (Join-Path $data "static")
+$staticSource = Resolve-RequiredDirectory -Path (Join-Path $repo "assets\static")
 
 $configText = [System.IO.File]::ReadAllText($config)
 if ($configText -notmatch '(?m)^http_port\s*=\s*21100\s*$') {

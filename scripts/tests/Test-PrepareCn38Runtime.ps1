@@ -25,8 +25,8 @@ try {
 
     $null = New-Item -ItemType Directory -Path (Join-Path $fakeRepo "common") -Force
     $null = New-Item -ItemType Directory -Path (Join-Path $fakeRepo "target\debug") -Force
+    $null = New-Item -ItemType Directory -Path (Join-Path $fakeRepo "assets\static") -Force
     $null = New-Item -ItemType Directory -Path (Join-Path $dataSource "excel2json") -Force
-    $null = New-Item -ItemType Directory -Path (Join-Path $dataSource "static") -Force
 
     [System.IO.File]::WriteAllText(
         (Join-Path $fakeRepo "common\Config.toml"),
@@ -35,7 +35,7 @@ try {
     [System.IO.File]::WriteAllText((Join-Path $fakeRepo "target\debug\sdkserver.exe"), "sdk")
     [System.IO.File]::WriteAllText((Join-Path $fakeRepo "target\debug\gameserver.exe"), "game")
     [System.IO.File]::WriteAllText((Join-Path $dataSource "excel2json\character.json"), "[]")
-    [System.IO.File]::WriteAllText((Join-Path $dataSource "static\marker.txt"), "static")
+    [System.IO.File]::WriteAllText((Join-Path $fakeRepo "assets\static\marker.txt"), "static")
     [System.IO.File]::WriteAllText((Join-Path $dataSource "sonetto.db"), "must-not-copy")
 
     $first = & $prepareScript -RepositoryRoot $fakeRepo -DataSource $dataSource -RuntimeRoot $runtimeRoot | ConvertFrom-Json
