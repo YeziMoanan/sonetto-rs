@@ -1,5 +1,6 @@
 use crate::state::battle::{
-    effects::effect_types::EffectType, mechanics::bloodtithe::BloodtitheState, step_builder::FightStepBuilder
+    effects::effect_types::EffectType, mechanics::bloodtithe::BloodtitheState,
+    step_builder::FightStepBuilder,
 };
 
 use super::super::utils::*;

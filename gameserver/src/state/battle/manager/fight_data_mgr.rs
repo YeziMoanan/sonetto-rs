@@ -1,14 +1,18 @@
 use std::sync::Arc;
 
 use crate::state::battle::{
-    effects::effect_types::EffectType, manager::{
+    effects::effect_types::EffectType,
+    manager::{
         blood_pool_mgr::FightBloodPoolDataMgr, buff_mgr::BuffMgr,
         calculate_mgr::FightCalculateDataMgr, card_mgr::FightCardMgr,
         entity_mgr::FightEntityDataMgr, round_mgr::FightRoundMgr,
-    }, mechanics::{
+    },
+    mechanics::{
         Mechanics,
         bloodtithe::{BloodtitheState, fight_enables_bloodtithe},
-    }, passives, step_builder::FightStepBuilder
+    },
+    passives,
+    step_builder::FightStepBuilder,
 };
 use anyhow::Result;
 use sonettobuf::{ActEffect, CardInfo, Fight, FightRound, FightStep};
@@ -47,178 +51,178 @@ impl FightDataMgr {
     }
 
     pub fn build_initial_round(
-            &mut self,
-            player_deck: Vec<CardInfo>,
-            ai_deck: Vec<CardInfo>,
-        ) -> Result<FightRound> {
-            let mut batch: Vec<ActEffect> = vec![];
-            let mut steps: Vec<FightStep> = vec![];
-    
-            let round_result = {
-                let fight = Arc::make_mut(&mut self.fight);
-    
-                // Bootstrap effects (activity buffs with protected wrapping)
-                let bootstrap_effects: Vec<ActEffect> = if let Some(attacker) = &fight.attacker {
-                    let mut all = Vec::new();
-                    for entity in &attacker.entitys {
-                        all.extend(passives::build_bootstrap(entity)?);
-                    }
-                    all
-                } else {
-                    Vec::new()
-                };
-    
-                if !bootstrap_effects.is_empty() {
-                    let effs = process_effects(
-                        bootstrap_effects,
-                        fight,
-                        &mut self.calculate_mgr,
-                        &mut self.mechanics.bloodtithe,
-                        &mut self.buff_mgr,
-                    )?;
-    
-                    steps.push(FightStepBuilder::new_effect().add_effects(effs).build());
+        &mut self,
+        player_deck: Vec<CardInfo>,
+        ai_deck: Vec<CardInfo>,
+    ) -> Result<FightRound> {
+        let mut batch: Vec<ActEffect> = vec![];
+        let mut steps: Vec<FightStep> = vec![];
+
+        let round_result = {
+            let fight = Arc::make_mut(&mut self.fight);
+
+            // Bootstrap effects (activity buffs with protected wrapping)
+            let bootstrap_effects: Vec<ActEffect> = if let Some(attacker) = &fight.attacker {
+                let mut all = Vec::new();
+                for entity in &attacker.entitys {
+                    all.extend(passives::build_bootstrap(entity)?);
                 }
-    
-                // Battle start effects (normal battle containers)
-                let battle_start_effects: Vec<ActEffect> = if let Some(attacker) = &fight.attacker {
-                    let mut all = Vec::new();
-                    for entity in &attacker.entitys {
-                        all.extend(passives::build_battle_start_passives(
-                            entity,
-                            fight,
-                            &mut self.mechanics.bloodtithe,
-                        )?);
-                    }
-                    all
-                } else {
-                    Vec::new()
-                };
-    
-                if !battle_start_effects.is_empty() {
-                    let effs = process_effects(
-                        battle_start_effects,
-                        fight,
-                        &mut self.calculate_mgr,
-                        &mut self.mechanics.bloodtithe,
-                        &mut self.buff_mgr,
-                    )?;
-    
-                    steps.push(FightStepBuilder::new_effect().add_effects(effs).build());
-                }
-    
-                // Bloodtithe UI sync
-                if fight_enables_bloodtithe(fight) {
-                    let team = 1;
-                    let bloodtithe_value = self.mechanics.bloodtithe.get_value(team);
-                    let bloodtithe_max = self.mechanics.bloodtithe.get_max(team);
-    
-                    let display_uid = fight
-                        .attacker
-                        .as_ref()
-                        .and_then(|a| a.entitys.iter().find(|e| e.team_type == Some(team)))
-                        .and_then(|e| e.uid)
-                        .unwrap_or(0);
-    
-                    let ui_step = FightStepBuilder::new_effect()
-                        .add_bloodtithe_ui_sync(team, display_uid, bloodtithe_value, bloodtithe_max)
-                        .build();
-    
-                    batch.extend(ui_step.act_effect);
-                }
-    
-                // Round start effects
-                let round_start_effects: Vec<ActEffect> = if let Some(attacker) = &fight.attacker {
-                    let mut all = Vec::new();
-                    for entity in &attacker.entitys {
-                        all.extend(passives::build_round_start_passives(
-                            entity,
-                            fight,
-                            &mut self.mechanics.bloodtithe,
-                        )?);
-                    }
-                    all
-                } else {
-                    Vec::new()
-                };
-    
-                if !round_start_effects.is_empty() {
-                    batch.extend(round_start_effects);
-                }
-    
-                // Enter fight deal
-                batch.push(ActEffect {
-                    effect_type: Some(EffectType::EnterFightDeal as i32), // 233
-                    target_id: Some(0),
-                    ..Default::default()
-                });
-    
-                // Card deck num updates
-                batch.push(ActEffect {
-                    effect_type: Some(EffectType::CardDeckNum as i32), // 310
-                    target_id: Some(0),
-                    team_type: Some(1),
-                    effect_num: Some(48),
-                    ..Default::default()
-                });
-    
-                batch.push(ActEffect {
-                    effect_type: Some(EffectType::CardDeckNum as i32), // 310
-                    target_id: Some(0),
-                    team_type: Some(1),
-                    effect_num: Some(48),
-                    ..Default::default()
-                });
-    
-                // Post power effects
-                let post_power_effects: Vec<ActEffect> = if let Some(attacker) = &fight.attacker {
-                    let mut all = Vec::new();
-                    for entity in &attacker.entitys {
-                        all.extend(passives::build_post_power_passives(entity, fight)?);
-                    }
-                    all
-                } else {
-                    Vec::new()
-                };
-    
-                if !post_power_effects.is_empty() {
-                    batch.extend(post_power_effects);
-                }
-    
-                batch.push(ActEffect {
-                    effect_type: Some(EffectType::CardDeckNum as i32), // 310
-                    target_id: Some(0),
-                    team_type: Some(1),
-                    effect_num: Some(48),
-                    ..Default::default()
-                });
-    
-                steps.push(FightStepBuilder::new_effect().add_effects(batch).build());
-    
-                FightRound {
-                    fight_step: steps,
-                    act_point: Some(3),
-                    is_finish: Some(false),
-                    move_num: Some(0),
-                    ex_point_info: self.calculate_mgr.build_ex_point_info(fight),
-                    ai_use_cards: ai_deck,
-                    power: Some(20),
-                    skill_infos: self.calculate_mgr.build_player_skills(),
-                    before_cards1: vec![],
-                    team_a_cards1: player_deck,
-                    before_cards2: vec![],
-                    team_a_cards2: vec![],
-                    next_round_begin_step: vec![],
-                    use_card_list: vec![],
-                    cur_round: Some(1),
-                    hero_sp_attributes: self.calculate_mgr.build_hero_sp_attributes(fight),
-                    last_change_hero_uid: Some(0),
-                }
+                all
+            } else {
+                Vec::new()
             };
-    
-            self.update_managers();
-            Ok(round_result)
-        }
+
+            if !bootstrap_effects.is_empty() {
+                let effs = process_effects(
+                    bootstrap_effects,
+                    fight,
+                    &mut self.calculate_mgr,
+                    &mut self.mechanics.bloodtithe,
+                    &mut self.buff_mgr,
+                )?;
+
+                steps.push(FightStepBuilder::new_effect().add_effects(effs).build());
+            }
+
+            // Battle start effects (normal battle containers)
+            let battle_start_effects: Vec<ActEffect> = if let Some(attacker) = &fight.attacker {
+                let mut all = Vec::new();
+                for entity in &attacker.entitys {
+                    all.extend(passives::build_battle_start_passives(
+                        entity,
+                        fight,
+                        &mut self.mechanics.bloodtithe,
+                    )?);
+                }
+                all
+            } else {
+                Vec::new()
+            };
+
+            if !battle_start_effects.is_empty() {
+                let effs = process_effects(
+                    battle_start_effects,
+                    fight,
+                    &mut self.calculate_mgr,
+                    &mut self.mechanics.bloodtithe,
+                    &mut self.buff_mgr,
+                )?;
+
+                steps.push(FightStepBuilder::new_effect().add_effects(effs).build());
+            }
+
+            // Bloodtithe UI sync
+            if fight_enables_bloodtithe(fight) {
+                let team = 1;
+                let bloodtithe_value = self.mechanics.bloodtithe.get_value(team);
+                let bloodtithe_max = self.mechanics.bloodtithe.get_max(team);
+
+                let display_uid = fight
+                    .attacker
+                    .as_ref()
+                    .and_then(|a| a.entitys.iter().find(|e| e.team_type == Some(team)))
+                    .and_then(|e| e.uid)
+                    .unwrap_or(0);
+
+                let ui_step = FightStepBuilder::new_effect()
+                    .add_bloodtithe_ui_sync(team, display_uid, bloodtithe_value, bloodtithe_max)
+                    .build();
+
+                batch.extend(ui_step.act_effect);
+            }
+
+            // Round start effects
+            let round_start_effects: Vec<ActEffect> = if let Some(attacker) = &fight.attacker {
+                let mut all = Vec::new();
+                for entity in &attacker.entitys {
+                    all.extend(passives::build_round_start_passives(
+                        entity,
+                        fight,
+                        &mut self.mechanics.bloodtithe,
+                    )?);
+                }
+                all
+            } else {
+                Vec::new()
+            };
+
+            if !round_start_effects.is_empty() {
+                batch.extend(round_start_effects);
+            }
+
+            // Enter fight deal
+            batch.push(ActEffect {
+                effect_type: Some(EffectType::EnterFightDeal as i32), // 233
+                target_id: Some(0),
+                ..Default::default()
+            });
+
+            // Card deck num updates
+            batch.push(ActEffect {
+                effect_type: Some(EffectType::CardDeckNum as i32), // 310
+                target_id: Some(0),
+                team_type: Some(1),
+                effect_num: Some(48),
+                ..Default::default()
+            });
+
+            batch.push(ActEffect {
+                effect_type: Some(EffectType::CardDeckNum as i32), // 310
+                target_id: Some(0),
+                team_type: Some(1),
+                effect_num: Some(48),
+                ..Default::default()
+            });
+
+            // Post power effects
+            let post_power_effects: Vec<ActEffect> = if let Some(attacker) = &fight.attacker {
+                let mut all = Vec::new();
+                for entity in &attacker.entitys {
+                    all.extend(passives::build_post_power_passives(entity, fight)?);
+                }
+                all
+            } else {
+                Vec::new()
+            };
+
+            if !post_power_effects.is_empty() {
+                batch.extend(post_power_effects);
+            }
+
+            batch.push(ActEffect {
+                effect_type: Some(EffectType::CardDeckNum as i32), // 310
+                target_id: Some(0),
+                team_type: Some(1),
+                effect_num: Some(48),
+                ..Default::default()
+            });
+
+            steps.push(FightStepBuilder::new_effect().add_effects(batch).build());
+
+            FightRound {
+                fight_step: steps,
+                act_point: Some(3),
+                is_finish: Some(false),
+                move_num: Some(0),
+                ex_point_info: self.calculate_mgr.build_ex_point_info(fight),
+                ai_use_cards: ai_deck,
+                power: Some(20),
+                skill_infos: self.calculate_mgr.build_player_skills(),
+                before_cards1: vec![],
+                team_a_cards1: player_deck,
+                before_cards2: vec![],
+                team_a_cards2: vec![],
+                next_round_begin_step: vec![],
+                use_card_list: vec![],
+                cur_round: Some(1),
+                hero_sp_attributes: self.calculate_mgr.build_hero_sp_attributes(fight),
+                last_change_hero_uid: Some(0),
+            }
+        };
+
+        self.update_managers();
+        Ok(round_result)
+    }
 
     pub fn update_managers(&mut self) {
         let fight_arc = self.get_fight();

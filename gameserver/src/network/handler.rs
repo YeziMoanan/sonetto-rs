@@ -273,19 +273,19 @@ pub async fn dispatch_command(
 
 #[cfg(test)]
 mod tests {
-    use super::{dispatch_command, raw_command_policy, RawCommandPolicy};
+    use super::{RawCommandPolicy, dispatch_command, raw_command_policy};
     use crate::error::{AppError, CmdError};
     use crate::network::packet::{ClientPacket, ServerPacket};
     use crate::state::{AppState, ConnectionContext};
     use sonettobuf::{
-        prost::Message, BeforeStartWeekwalkBattleReply, BeforeStartWeekwalkBattleRequest, CmdId,
+        BeforeStartWeekwalkBattleReply, BeforeStartWeekwalkBattleRequest, CmdId, prost::Message,
     };
     use sqlx::sqlite::SqlitePoolOptions;
     use std::sync::Arc;
     use tokio::io::AsyncReadExt;
     use tokio::net::{TcpListener, TcpStream};
     use tokio::sync::Mutex;
-    use tokio::time::{timeout, Duration};
+    use tokio::time::{Duration, timeout};
 
     async fn test_connection() -> (Arc<Mutex<ConnectionContext>>, TcpStream) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

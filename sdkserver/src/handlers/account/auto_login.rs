@@ -78,15 +78,9 @@ pub async fn post(
                 Err(_) => {
                     let email = format!("cached_{}@local.sonetto", user_id);
                     let password = format!("cached:{}", user_id);
-                    if let Err(create_error) = create_user(
-                        &state.game.db,
-                        user_id,
-                        &email,
-                        &password,
-                        &token_info,
-                        now,
-                    )
-                    .await
+                    if let Err(create_error) =
+                        create_user(&state.game.db, user_id, &email, &password, &token_info, now)
+                            .await
                     {
                         tracing::error!(
                             "Failed to create recovered local user {}: {}",
@@ -116,14 +110,7 @@ pub async fn post(
         }
     };
 
-    if let Err(e) = update_user_login(
-        &state.game.db,
-        user.user_id,
-        &token_info,
-        now,
-    )
-    .await
-    {
+    if let Err(e) = update_user_login(&state.game.db, user.user_id, &token_info, now).await {
         tracing::error!("Failed to update tokens: {}", e);
     }
 
