@@ -147,3 +147,24 @@ impl ServerConfig {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bundled_template_is_cn_38_isolated() {
+        let config: ServerConfig = toml::from_str(CONFIG_TEMPLATE).unwrap();
+
+        assert_eq!(config.server.host, "127.0.0.1");
+        assert_eq!(config.server.http_port, 21100);
+        assert_eq!(config.server.game_port, 23401);
+        assert_eq!(config.paths.data_dir, PathBuf::from("./data"));
+        assert_eq!(config.paths.excel_data, PathBuf::from("./data/excel2json"));
+        assert_eq!(config.paths.static_data, PathBuf::from("./data/static"));
+        assert_eq!(
+            config.database.path,
+            PathBuf::from("./db/sonetto-3.8-cn.db")
+        );
+    }
+}

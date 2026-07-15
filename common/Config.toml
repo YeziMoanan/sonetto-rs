@@ -1,8 +1,8 @@
 [server]
 host = "127.0.0.1"
 dns = "localhost"
-http_port = 21000
-game_port = 23301
+http_port = 21100
+game_port = 23401
 
 [paths]
 data_dir = "./data"
@@ -10,7 +10,7 @@ excel_data = "./data/excel2json"
 static_data = "./data/static"
 
 [database]
-path = "./db/sonetto.db"
+path = "./db/sonetto-3.8-cn.db"
 
 [[banners]]
 id = 1
