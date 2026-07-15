@@ -15,7 +15,8 @@ use sonettobuf::{
     Act101Info, Act160GetInfoReply, Act165GetInfoReply, Act212BonusNo, Act212InfoNo, CmdId,
     Get101BonusReply, Get101BonusRequest, Get101InfosReply, Get101InfosRequest,
     GetAct125InfosReply, GetAct125InfosRequest, GetAct208InfoReply, GetAct209InfoReply,
-    GetAct212InfoReply, GetActivityInfosReply,
+    GetAct212InfoReply, GetActivityInfosReply, GetActivityInfosWithParamReply,
+    GetActivityInfosWithParamRequest,
 };
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -31,6 +32,37 @@ pub async fn on_get_activity_infos(
         GetActivityInfosReply,
         "activity/activity_infos.json"
     );
+    Ok(())
+}
+
+pub async fn on_get_activity_infos_with_param(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    req: ClientPacket,
+) -> Result<(), AppError> {
+    let request = GetActivityInfosWithParamRequest::decode(&req.data[..])?;
+    let all_activities: GetActivityInfosReply =
+        GameDataLoader::load_struct("activity/activity_infos.json")
+            .map_err(|e| AppError::Custom(format!("Failed to load activity infos: {}", e)))?;
+
+    let activity_infos = all_activities
+        .activity_infos
+        .into_iter()
+        .filter(|activity| {
+            activity
+                .id
+                .is_some_and(|id| request.activity_ids.contains(&(id as i32)))
+        })
+        .collect();
+
+    let mut conn = ctx.lock().await;
+    conn.send_reply(
+        CmdId::GetActivityInfosWithParamCmd,
+        GetActivityInfosWithParamReply { activity_infos },
+        0,
+        req.up_tag,
+    )
+    .await?;
+
     Ok(())
 }
 

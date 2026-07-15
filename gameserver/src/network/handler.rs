@@ -95,6 +95,7 @@ pub async fn dispatch_command(
         CmdId::ChoiceHero3123WeaponCmd => hero::on_choice_hero_3123_weapon,
         // sets euphoria for heros
         CmdId::DestinyStoneUseCmd => destiny_stone::on_destiny_stone_use,
+        CmdId::DestinyRankUpCmd => destiny_stone::on_destiny_rank_up,
         CmdId::HeroUpgradeSkillCmd => hero::on_hero_upgrade_skill,
         CmdId::UnMarkIsNewCmd => hero::on_unmark_is_new,
         CmdId::HeroLevelUpCmd => hero::on_hero_level_up,
@@ -144,6 +145,7 @@ pub async fn dispatch_command(
         CmdId::ChangeHeroGroupSelectCmd => dungeon::on_change_hero_group_select,
         CmdId::DungeonEndDungeonCmd => dungeon::on_dungeon_end_dungeon,
         CmdId::ReconnectFightCmd => fight::on_reconnect_fight,
+        CmdId::GetFightCardDeckInfoCmd => fight::on_get_fight_card_deck_info,
 
         // === Tower ===
         CmdId::GetTowerInfoCmd => tower::on_get_tower_info,
@@ -255,6 +257,7 @@ pub async fn dispatch_command(
 
         // === Activities ===
         CmdId::GetActivityInfosCmd => events::on_get_activity_infos,
+        CmdId::GetActivityInfosWithParamCmd => events::on_get_activity_infos_with_param,
         // Controls the ui for the latest euphoria not implemented yet tho
         CmdId::GetAct125InfosCmd => events::on_get_act125_infos,
         // controls ui for bonus currency at the start usually for 7 days
@@ -278,10 +281,14 @@ mod tests {
     use crate::network::packet::{ClientPacket, ServerPacket};
     use crate::state::{AppState, ConnectionContext};
     use sonettobuf::{
-        BeforeStartWeekwalkBattleReply, BeforeStartWeekwalkBattleRequest, CmdId, prost::Message,
+        BeforeStartWeekwalkBattleReply, BeforeStartWeekwalkBattleRequest, CmdId,
+        DestinyRankUpRequest, GetActivityInfosWithParamReply, GetActivityInfosWithParamRequest,
+        GetFightCardDeckInfoReply, GetFightCardDeckInfoRequest, prost::Message,
     };
     use sqlx::sqlite::SqlitePoolOptions;
+    use std::path::PathBuf;
     use std::sync::Arc;
+    use std::sync::Once;
     use tokio::io::AsyncReadExt;
     use tokio::net::{TcpListener, TcpStream};
     use tokio::sync::Mutex;
@@ -301,6 +308,90 @@ mod tests {
         let context = ConnectionContext::new(Arc::new(Mutex::new(server)), state);
 
         (Arc::new(Mutex::new(context)), client)
+    }
+
+    async fn test_connection_with_migrated_db() -> (Arc<Mutex<ConnectionContext>>, TcpStream) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let (client, server) = tokio::join!(TcpStream::connect(address), listener.accept());
+        let client = client.unwrap();
+        let (server, _) = server.unwrap();
+
+        let db = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        database::run_migrations(&db).await.unwrap();
+        sqlx::query(
+            r#"INSERT INTO users (
+                id, username, account_type, created_at, updated_at
+            ) VALUES (90000001, 'test-user', 10, 0, 0)"#,
+        )
+        .execute(&db)
+        .await
+        .unwrap();
+        sqlx::query(
+            r#"INSERT INTO heroes (
+                uid, user_id, hero_id, create_time, level, exp, rank, breakthrough,
+                skin, faith, active_skill_level, ex_skill_level, destiny_rank,
+                destiny_level, base_hp, base_attack, base_defense, base_mdefense,
+                base_technic
+            ) VALUES (1, 90000001, 3098, 0, 180, 0, 4, 0, 309801, 0, 1, 1,
+                      0, 0, 1, 1, 1, 1, 1)"#,
+        )
+        .execute(&db)
+        .await
+        .unwrap();
+
+        let state = Arc::new(AppState::new(db));
+        let mut context = ConnectionContext::new(Arc::new(Mutex::new(server)), state);
+        context.player_id = Some(90000001);
+
+        (Arc::new(Mutex::new(context)), client)
+    }
+
+    fn ensure_test_config() {
+        static INIT: Once = Once::new();
+
+        INIT.call_once(|| {
+            let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+            common::init_config(common::config::ServerConfig {
+                server: common::config::ServerSettings {
+                    host: "127.0.0.1".to_string(),
+                    dns: "127.0.0.1".to_string(),
+                    http_port: 21100,
+                    game_port: 23401,
+                },
+                paths: common::config::PathConfig {
+                    data_dir: root.join("assets"),
+                    excel_data: root.join("assets"),
+                    static_data: root.join("assets/static"),
+                },
+                database: common::config::DatabaseConfig {
+                    path: root.join("target/test-sonetto-3.8-cn.db"),
+                },
+                banners: vec![],
+            });
+        });
+    }
+
+    async fn read_server_packet(client: &mut TcpStream) -> ServerPacket {
+        let mut length = [0_u8; 4];
+        timeout(Duration::from_secs(1), client.read_exact(&mut length))
+            .await
+            .expect("timed out waiting for reply length")
+            .unwrap();
+
+        let payload_length = u32::from_be_bytes(length) as usize;
+        let mut encoded = length.to_vec();
+        encoded.resize(4 + payload_length, 0);
+        timeout(Duration::from_secs(1), client.read_exact(&mut encoded[4..]))
+            .await
+            .expect("timed out waiting for reply body")
+            .unwrap();
+
+        ServerPacket::decode(&encoded).unwrap()
     }
 
     #[test]
@@ -453,6 +544,92 @@ mod tests {
         assert_eq!(reply.down_tag, consumed_down_tag + 1);
         assert_eq!(body.element_id, Some(4321));
         assert_eq!(body.layer_id, Some(7));
+    }
+
+    #[tokio::test]
+    async fn destiny_rank_up_unlocks_first_rank_for_zero_rank_hero() {
+        let (ctx, _client) = test_connection_with_migrated_db().await;
+        let request = ClientPacket {
+            sequence: 1,
+            cmd_id: CmdId::DestinyRankUpCmd as i16,
+            up_tag: 41,
+            data: DestinyRankUpRequest {
+                hero_id: Some(3098),
+            }
+            .encode_to_vec(),
+        }
+        .encode();
+
+        dispatch_command(Arc::clone(&ctx), &request).await.unwrap();
+
+        let db = ctx.lock().await.state.db.clone();
+        let updated: (i32, i32) = sqlx::query_as(
+            "SELECT destiny_rank, destiny_level FROM heroes WHERE user_id = ? AND hero_id = ?",
+        )
+        .bind(90000001_i64)
+        .bind(3098_i32)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+
+        assert_eq!(updated, (1, 1));
+    }
+
+    #[tokio::test]
+    async fn activity_infos_with_param_returns_only_requested_activities() {
+        ensure_test_config();
+        let (ctx, mut client) = test_connection().await;
+        let request = ClientPacket {
+            sequence: 1,
+            cmd_id: CmdId::GetActivityInfosWithParamCmd as i16,
+            up_tag: 42,
+            data: GetActivityInfosWithParamRequest {
+                activity_ids: vec![13316, 12301],
+            }
+            .encode_to_vec(),
+        }
+        .encode();
+
+        dispatch_command(Arc::clone(&ctx), &request).await.unwrap();
+        ctx.lock().await.flush_send_queue().await.unwrap();
+
+        let reply = read_server_packet(&mut client).await;
+        let body = reply
+            .decode_message::<GetActivityInfosWithParamReply>()
+            .unwrap();
+        let ids = body
+            .activity_infos
+            .into_iter()
+            .filter_map(|activity| activity.id)
+            .collect::<Vec<_>>();
+
+        assert_eq!(reply.cmd_id, CmdId::GetActivityInfosWithParamCmd as i16);
+        assert_eq!(reply.result_code, 0);
+        assert_eq!(reply.up_tag, 42);
+        assert_eq!(ids, vec![13316, 12301]);
+    }
+
+    #[tokio::test]
+    async fn fight_card_deck_info_returns_empty_success_reply() {
+        let (ctx, mut client) = test_connection().await;
+        let request = ClientPacket {
+            sequence: 1,
+            cmd_id: CmdId::GetFightCardDeckInfoCmd as i16,
+            up_tag: 43,
+            data: GetFightCardDeckInfoRequest { r#type: Some(0) }.encode_to_vec(),
+        }
+        .encode();
+
+        dispatch_command(Arc::clone(&ctx), &request).await.unwrap();
+        ctx.lock().await.flush_send_queue().await.unwrap();
+
+        let reply = read_server_packet(&mut client).await;
+        let body = reply.decode_message::<GetFightCardDeckInfoReply>().unwrap();
+
+        assert_eq!(reply.cmd_id, CmdId::GetFightCardDeckInfoCmd as i16);
+        assert_eq!(reply.result_code, 0);
+        assert_eq!(reply.up_tag, 43);
+        assert!(body.deck_infos.is_empty());
     }
 
     #[tokio::test]

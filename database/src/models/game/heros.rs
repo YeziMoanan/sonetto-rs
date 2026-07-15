@@ -21,6 +21,7 @@ pub trait HeroModel<T> {
     async fn skins(&self) -> Result<Vec<i32>>;
     async fn birthdays(&self) -> Result<Vec<(i32, i32)>>;
     async fn destiny_stone(&self, hero_id: i32, stone_id: i32) -> Result<()>;
+    async fn destiny_rank_up(&self, hero_id: i32) -> Result<(i32, i32)>;
     async fn level_up(&self, hero_id: i32, new_level: i32, stats: &CharacterLevel) -> Result<()>;
     async fn rank_up(&self, hero_id: i32, new_rank: i32) -> Result<()>;
     async fn unlock_insight_skin(&self, hero_id: i32, target_rank: i32) -> Result<bool>;
@@ -1319,6 +1320,26 @@ impl HeroModel<HeroData> for UserHeroModel {
             .await?;
 
         Ok(())
+    }
+
+    async fn destiny_rank_up(&self, hero_id: i32) -> Result<(i32, i32)> {
+        let hero_data = self.get(hero_id).await?;
+        let new_rank = hero_data.record.destiny_rank.saturating_add(1).max(1);
+        let new_level = 1;
+
+        sqlx::query(
+            "UPDATE heroes
+             SET destiny_rank = ?, destiny_level = ?
+             WHERE uid = ? AND user_id = ?",
+        )
+        .bind(new_rank)
+        .bind(new_level)
+        .bind(hero_data.record.uid)
+        .bind(self.user_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok((new_rank, new_level))
     }
 
     async fn level_up(&self, hero_id: i32, new_level: i32, stats: &CharacterLevel) -> Result<()> {
