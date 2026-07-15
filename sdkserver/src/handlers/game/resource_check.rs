@@ -1,15 +1,28 @@
 use crate::AppState;
-use axum::extract::{OriginalUri, State};
+use axum::{
+    Json,
+    extract::{OriginalUri, State},
+    response::{IntoResponse, Response},
+};
+use serde_json::json;
 
-pub async fn get(State(state): State<AppState>, uri: OriginalUri) -> String {
+pub async fn get(State(state): State<AppState>, uri: OriginalUri) -> Response {
+    if uri.path().starts_with("/resource/50001/") {
+        return Json(json!({})).into_response();
+    }
+
     const HOST: &str = "optionalres-hw.sl916.com";
     let uri = format!("https://{}{}", HOST, uri.path_and_query().unwrap().as_str());
 
     if let Ok(v) = state.sdk.http_client.get(&uri).send().await {
-        return v.text().await.unwrap_or(default_check());
+        return v
+            .text()
+            .await
+            .unwrap_or_else(|_| default_check())
+            .into_response();
     }
 
-    default_check()
+    default_check().into_response()
 }
 
 fn default_check() -> String {

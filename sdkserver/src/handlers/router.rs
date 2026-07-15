@@ -61,6 +61,7 @@ router! {
     "/v1.0/c2s/session/app/nativepc/50001" post c2s_session;
     "/v1.0/c2s/session/app/nativepc/60001" post c2s_session;
     "/config" get config;
+    "/diff-update/resource" post diff_update_resource;
     "/noticecp/config" get noticecp_config;
     "/noticecp/client/query" get noticecp_query;
     "/patch/50001/version" get patch_version;
@@ -158,6 +159,96 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
+    }
+
+    #[tokio::test]
+    async fn cn_resource_check_returns_without_international_upstream_data() {
+        let response = tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            app().oneshot(
+                Request::builder()
+                    .uri("/resource/50001/check")
+                    .body(Body::empty())
+                    .unwrap(),
+            ),
+        )
+        .await
+        .expect("CN resource check must not wait for the international upstream")
+        .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()[header::CONTENT_TYPE], "application/json");
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json, serde_json::json!({}));
+    }
+
+    #[tokio::test]
+    async fn cn_diff_update_resource_returns_no_patch() {
+        let response = app()
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/diff-update/resource")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "gameId": 50001,
+                            "osType": 2,
+                            "envType": 4,
+                            "channelId": 100,
+                            "subChannelId": "1000",
+                            "currentVersion": "3.8.0",
+                            "sign": "test"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], 200);
+        assert_eq!(json["msg"], "ok");
+        assert_eq!(json["data"]["forceUpdate"], false);
+        assert!(json["data"]["diffPackage"].is_null());
+    }
+
+    #[tokio::test]
+    async fn cn_diff_update_resource_rejects_malformed_json() {
+        let response = app()
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/diff-update/resource")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from("not-json"))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn cn_diff_update_resource_rejects_other_game_ids() {
+        let response = app()
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/diff-update/resource")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(r#"{"gameId":60001}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]

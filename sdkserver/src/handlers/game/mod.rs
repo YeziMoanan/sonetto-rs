@@ -1,5 +1,6 @@
 pub mod c2s_session;
 pub mod config;
+pub mod diff_update_resource;
 
 pub mod noticecp_config;
 pub mod noticecp_query;

@@ -130,7 +130,7 @@ pub struct JspLoginQuery {
     #[serde(rename = "sysType")]
     pub sys_type: i32,
     #[serde(rename = "accountId")]
-    pub account_id: String, // Format: "200_1337"
+    pub account_id: String, // Format: "channelId_userId"
     #[serde(rename = "channelId")]
     pub channel_id: String,
     #[serde(rename = "subChannelId")]

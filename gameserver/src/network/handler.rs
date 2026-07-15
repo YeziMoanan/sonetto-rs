@@ -1,4 +1,4 @@
-use crate::error::{AppError, CmdError};
+use crate::error::AppError;
 use crate::handlers::*;
 use crate::network::packet::{ClientPacket, CompatibilityCommand};
 use crate::state::ConnectionContext;
@@ -29,7 +29,14 @@ macro_rules! dispatch {
             $(
                 $variant => $handler($ctx, $packet).await?,
             )*
-            v => return Err(AppError::Cmd(CmdError::UnhandledCmd(v))),
+            v => {
+                tracing::warn!("Replying with an error for registered command without a handler: {:?}", v);
+                $ctx.lock()
+                    .await
+                    .send_empty_reply(v, Vec::new(), 1, $packet.up_tag)
+                    .await?;
+                return Ok(());
+            },
         }
     };
 }
@@ -59,8 +66,13 @@ pub async fn dispatch_command(
         return Ok(());
     }
 
-    let cmd_id = TryInto::<CmdId>::try_into(req.cmd_id as i32)
-        .map_err(|_| AppError::Cmd(CmdError::UnregisteredCmd(req.cmd_id)))?;
+    let cmd_id = match TryInto::<CmdId>::try_into(req.cmd_id as i32) {
+        Ok(cmd_id) => cmd_id,
+        Err(_) => {
+            tracing::warn!("Ignoring unregistered command ID: {}", req.cmd_id);
+            return Ok(());
+        }
+    };
 
     tracing::info!("Received Cmd: {:?}", cmd_id);
 
@@ -277,7 +289,6 @@ pub async fn dispatch_command(
 #[cfg(test)]
 mod tests {
     use super::{RawCommandPolicy, dispatch_command, raw_command_policy};
-    use crate::error::{AppError, CmdError};
     use crate::network::packet::{ClientPacket, ServerPacket};
     use crate::state::{AppState, ConnectionContext};
     use sonettobuf::{
@@ -633,7 +644,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn other_unregistered_raw_command_still_errors() {
+    async fn unregistered_raw_command_is_ignored() {
         let (ctx, _client) = test_connection().await;
         let request = ClientPacket {
             sequence: 1,
@@ -643,11 +654,32 @@ mod tests {
         }
         .encode();
 
-        let result = dispatch_command(ctx, &request).await;
+        let result = dispatch_command(Arc::clone(&ctx), &request).await;
 
-        assert!(matches!(
-            result,
-            Err(AppError::Cmd(CmdError::UnregisteredCmd(20145)))
-        ));
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn registered_unhandled_command_returns_error_reply() {
+        let (ctx, mut client) = test_connection().await;
+        let request = ClientPacket {
+            sequence: 1,
+            cmd_id: CmdId::ReadNewAchievementCmd as i16,
+            up_tag: 38,
+            data: Vec::new(),
+        }
+        .encode();
+
+        let result = dispatch_command(Arc::clone(&ctx), &request).await;
+
+        assert!(result.is_ok());
+        ctx.lock().await.flush_send_queue().await.unwrap();
+
+        let reply = read_server_packet(&mut client).await;
+
+        assert_eq!(reply.cmd_id, CmdId::ReadNewAchievementCmd as i16);
+        assert_eq!(reply.result_code, 1);
+        assert_eq!(reply.up_tag, 38);
+        assert!(reply.data.is_empty());
     }
 }
