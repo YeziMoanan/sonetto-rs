@@ -21,3 +21,6 @@ gameserver.workspace = true
 chrono.workspace = true
 anyhow.workspace = true
 config.workspace = true
+
+[dev-dependencies]
+tower.workspace = true

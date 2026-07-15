@@ -4,14 +4,44 @@ use crate::models::response::{
 use axum::{extract::Query, response::Json};
 use std::collections::HashMap;
 
+const CN_GAME_ID: i32 = 50001;
+const CN_CHANNEL_ID: i32 = 100;
+const INTERNATIONAL_GAME_ID: i32 = 60001;
+const INTERNATIONAL_CHANNEL_ID: i32 = 200;
+
+fn positive_query_value(query: &HashMap<String, String>, key: &str) -> Option<i32> {
+    query
+        .iter()
+        .find(|(candidate, _)| candidate.eq_ignore_ascii_case(key))
+        .and_then(|(_, value)| value.parse::<i32>().ok())
+        .filter(|value| *value > 0)
+}
+
+fn requested_game_channel(query: &HashMap<String, String>) -> (i32, i32) {
+    let game_id = match positive_query_value(query, "gameId") {
+        Some(INTERNATIONAL_GAME_ID) => INTERNATIONAL_GAME_ID,
+        Some(CN_GAME_ID) | None => CN_GAME_ID,
+        Some(_) => CN_GAME_ID,
+    };
+    let default_channel_id = if game_id == INTERNATIONAL_GAME_ID {
+        INTERNATIONAL_CHANNEL_ID
+    } else {
+        CN_CHANNEL_ID
+    };
+    let channel_id = positive_query_value(query, "channelId").unwrap_or(default_channel_id);
+
+    (game_id, channel_id)
+}
+
 pub async fn post(query: Query<HashMap<String, String>>) -> Json<AccountSdkInitRsp> {
     let has_query = !query.is_empty();
 
     let data = if has_query {
+        let (game_id, channel_id) = requested_game_channel(&query);
         AccountSdkInitRspData {
             game_channel: Some(GameChannel {
-                game_id: 60001,
-                channel_id: 200,
+                game_id,
+                channel_id,
                 cp_name: "重返未来：1999".to_string(),
                 app_id: "1".to_string(),
                 app_key: "1".to_string(),
@@ -74,4 +104,63 @@ pub async fn post(query: Query<HashMap<String, String>>) -> Json<AccountSdkInitR
     };
 
     Json(rsp)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::post;
+    use axum::extract::Query;
+    use std::collections::HashMap;
+
+    #[tokio::test]
+    async fn cn_query_returns_cn_game_channel() {
+        let response = post(Query(HashMap::from([(
+            "gameId".to_string(),
+            "50001".to_string(),
+        )])))
+        .await;
+        let channel = response.0.data.game_channel.unwrap();
+
+        assert_eq!(channel.game_id, 50001);
+        assert_eq!(channel.channel_id, 100);
+    }
+
+    #[tokio::test]
+    async fn international_query_keeps_international_game_channel() {
+        let response = post(Query(HashMap::from([(
+            "gameId".to_string(),
+            "60001".to_string(),
+        )])))
+        .await;
+        let channel = response.0.data.game_channel.unwrap();
+
+        assert_eq!(channel.game_id, 60001);
+        assert_eq!(channel.channel_id, 200);
+    }
+
+    #[tokio::test]
+    async fn lowercase_query_can_override_channel_id() {
+        let response = post(Query(HashMap::from([
+            ("gameid".to_string(), "50001".to_string()),
+            ("channelid".to_string(), "321".to_string()),
+        ])))
+        .await;
+        let channel = response.0.data.game_channel.unwrap();
+
+        assert_eq!(channel.game_id, 50001);
+        assert_eq!(channel.channel_id, 321);
+    }
+
+    #[tokio::test]
+    async fn nonempty_query_without_game_id_uses_cn_defaults() {
+        let response = post(Query(HashMap::from([(
+            "osType".to_string(),
+            "2".to_string(),
+        )])))
+        .await;
+        let channel = response.0.data.game_channel.unwrap();
+
+        assert_eq!(channel.game_id, 50001);
+        assert_eq!(channel.channel_id, 100);
+    }
 }
