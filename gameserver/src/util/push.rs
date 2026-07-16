@@ -139,8 +139,7 @@ pub async fn send_currency_change_push(
         conn.notify(CmdId::CurrencyChangePushCmd, push).await?;
 
         tracing::info!(
-            "Sent CurrencyChangePush to user {}: {} currencies [{}] (added: {})",
-            user_id,
+            "Sent CurrencyChangePush: {} currencies [{}] (added: {})",
             totals.len(),
             currencies_list
                 .iter()

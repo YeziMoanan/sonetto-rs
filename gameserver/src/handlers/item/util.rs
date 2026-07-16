@@ -206,10 +206,14 @@ async fn unlock_insight_skin(
     Ok(())
 }
 
-pub async fn can_claim_month_card(
+pub(crate) async fn can_claim_month_card_with_lookup<MonthCardBonus>(
     ctx: Arc<Mutex<ConnectionContext>>,
     player_id: i64,
-) -> Result<(), AppError> {
+    month_card_bonus: MonthCardBonus,
+) -> Result<(), AppError>
+where
+    MonthCardBonus: Fn(i32) -> Option<String>,
+{
     let pool = {
         let conn = ctx.lock().await;
         conn.state.db.clone()
@@ -245,7 +249,7 @@ pub async fn can_claim_month_card(
     .await?;
 
     if already_claimed.is_some() {
-        tracing::info!("User {} already claimed month card today", player_id);
+        tracing::info!("Player already claimed month card today");
         return Ok(());
     }
 
@@ -256,10 +260,7 @@ pub async fn can_claim_month_card(
     };
 
     if !logged_in_today {
-        tracing::info!(
-            "User {} not logged in today, skipping month card claim",
-            player_id
-        );
+        tracing::info!("Player not logged in today, skipping month card claim");
         return Ok(());
     }
 
@@ -279,21 +280,19 @@ pub async fn can_claim_month_card(
     }
 
     tracing::info!(
-        "Auto-claiming month card daily bonus (user_id={}, server_day={}, day={})",
-        player_id,
+        "Auto-claiming month card daily bonus (server_day={}, day={})",
         server_day,
         day_of_month
     );
 
-    let game_data = config::configs::get();
     let mut reward_str = String::new();
 
     for (card_id, _) in &active_cards {
-        if let Some(card) = game_data.month_card.iter().find(|c| c.id == *card_id) {
+        if let Some(daily_bonus) = month_card_bonus(*card_id) {
             if !reward_str.is_empty() {
                 reward_str.push('|');
             }
-            reward_str.push_str(&card.daily_bonus);
+            reward_str.push_str(&daily_bonus);
         }
     }
 
