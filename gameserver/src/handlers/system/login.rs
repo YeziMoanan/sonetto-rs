@@ -193,3 +193,177 @@ pub async fn on_login(
     tracing::info!("✓ Login successful");
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::on_login;
+    use crate::{
+        network::packet::ClientPacket,
+        state::{AppState, ConnectionContext},
+    };
+    use common::time::ServerTime;
+    use database::db::game::sign_in;
+    use sonettobuf::CmdId;
+    use sqlx::sqlite::SqlitePoolOptions;
+    use std::{
+        io::{self, Write},
+        sync::{Arc, Mutex as StdMutex},
+    };
+    use tokio::{
+        net::{TcpListener, TcpStream},
+        sync::Mutex,
+    };
+    use tracing_subscriber::fmt::MakeWriter;
+
+    #[derive(Clone, Default)]
+    struct CaptureWriter(Arc<StdMutex<Vec<u8>>>);
+
+    impl CaptureWriter {
+        fn contents(&self) -> String {
+            String::from_utf8(self.0.lock().unwrap().clone()).unwrap()
+        }
+    }
+
+    impl Write for CaptureWriter {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl<'a> MakeWriter<'a> for CaptureWriter {
+        type Writer = CaptureWriter;
+
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
+    }
+
+    fn capture_logs() -> (CaptureWriter, tracing::dispatcher::DefaultGuard) {
+        let writer = CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_ansi(false)
+            .without_time()
+            .with_target(false)
+            .with_level(false)
+            .with_max_level(tracing::Level::TRACE)
+            .with_writer(writer.clone())
+            .finish();
+        let dispatch = tracing::Dispatch::new(subscriber);
+        let guard = tracing::dispatcher::set_default(&dispatch);
+        (writer, guard)
+    }
+
+    async fn socket_pair() -> (TcpStream, TcpStream) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let (client, server) = tokio::join!(TcpStream::connect(address), listener.accept());
+        (client.unwrap(), server.unwrap().0)
+    }
+
+    fn login_payload(account_id: &str, token: &str) -> Vec<u8> {
+        let mut payload = Vec::new();
+        payload.extend_from_slice(&(account_id.len() as u16).to_be_bytes());
+        payload.extend_from_slice(account_id.as_bytes());
+        payload.extend_from_slice(&(token.len() as u16).to_be_bytes());
+        payload.extend_from_slice(token.as_bytes());
+        payload
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn tcp_login_success_chain_logs_no_account_token_or_player_identifier() {
+        let db = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        database::run_migrations(&db).await.unwrap();
+        let user_id = 8_987_654_321_011_i64;
+        let account_id = user_id.to_string();
+        let token = "tcp-success-token-secret";
+        let now = ServerTime::now_ms();
+        sqlx::query(
+            r#"INSERT INTO users (
+                    id, username, token, token_expires_at, created_at, updated_at, last_login_at
+                ) VALUES (?1, 'tcp-test-user', ?2, ?3, ?4, ?4, ?4)"#,
+        )
+        .bind(user_id)
+        .bind(token)
+        .bind(i64::MAX)
+        .bind(now)
+        .execute(&db)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO player_state (player_id, created_at, updated_at, last_sign_in_time) VALUES (?1, ?2, ?2, ?2)",
+        )
+        .bind(user_id)
+        .bind(now)
+        .execute(&db)
+        .await
+        .unwrap();
+        let (_client, server) = socket_pair().await;
+        let state = Arc::new(AppState::new(db));
+        let ctx = Arc::new(Mutex::new(ConnectionContext::new(
+            Arc::new(Mutex::new(server)),
+            Arc::clone(&state),
+        )));
+        let (writer, _guard) = capture_logs();
+
+        on_login(
+            Arc::clone(&ctx),
+            ClientPacket {
+                sequence: 1,
+                cmd_id: CmdId::LoginRequestCmd as i16,
+                up_tag: 7,
+                data: login_payload(&account_id, token),
+            },
+        )
+        .await
+        .unwrap();
+
+        assert!(ctx.lock().await.logged_in);
+        let logs = writer.contents();
+        for secret in [account_id.as_str(), token] {
+            assert!(
+                !logs.contains(secret),
+                "TCP login log leaked {secret}: {logs}"
+            );
+        }
+        assert!(logs.contains("Login successful"));
+        state.unregister_session(user_id);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn tcp_sign_in_failure_error_and_caller_log_do_not_echo_player_identifier() {
+        let db = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        database::run_migrations(&db).await.unwrap();
+        let user_id = 8_987_654_321_022_i64;
+        let user_id_text = user_id.to_string();
+        let (writer, _guard) = capture_logs();
+
+        let error = sign_in::process_daily_login(&db, user_id)
+            .await
+            .unwrap_err();
+        tracing::error!("Client handler error: {error}");
+
+        assert!(error.to_string().contains("users row missing"));
+        assert!(
+            !error.to_string().contains(&user_id_text),
+            "sign-in error leaked player identifier: {error}"
+        );
+        let logs = writer.contents();
+        assert!(
+            !logs.contains(&user_id_text),
+            "caller log leaked player identifier: {logs}"
+        );
+    }
+}

@@ -1797,6 +1797,7 @@ dependencies = [
  "anyhow",
  "axum",
  "axum-server",
+ "bcrypt",
  "chrono",
  "common",
  "config",

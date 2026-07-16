@@ -36,17 +36,13 @@ pub async fn post(
     .await
     {
         Ok(user) => user,
-        Err(e) => {
-            tracing::warn!("Login failed: {}", e);
+        Err(_error) => {
+            tracing::warn!("Login failed");
             return Json(create_error_response());
         }
     };
 
-    tracing::info!(
-        "Login successful - User ID: {}, First join: {}",
-        user.id,
-        user.first_join
-    );
+    tracing::info!("Login successful");
 
     let rsp = AccountLoginRsp {
         code: 200,

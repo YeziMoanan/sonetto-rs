@@ -46,8 +46,7 @@ async fn record_sign_in_day(pool: &SqlitePool, user_id: i64, now: i64) -> Result
     .await?;
 
     tracing::info!(
-        "Sign-in recorded user_id={} day={} server_day={}",
-        user_id,
+        "Sign-in recorded day={} server_day={}",
         day_of_month,
         server_day
     );
@@ -67,7 +66,7 @@ pub async fn process_daily_login(pool: &SqlitePool, user_id: i64) -> Result<(boo
         .rows_affected();
 
     if users_rows == 0 {
-        anyhow::bail!("users row missing for user_id={}", user_id);
+        anyhow::bail!("users row missing during sign-in");
     }
 
     let last_sign_in_time: Option<i64> =
@@ -137,7 +136,7 @@ pub async fn process_daily_login(pool: &SqlitePool, user_id: i64) -> Result<(boo
     .rows_affected();
 
     if ps_rows == 0 {
-        anyhow::bail!("player_state row missing for user_id={}", user_id);
+        anyhow::bail!("player_state row missing during sign-in");
     }
 
     Ok((is_new_day, is_new_week, is_new_month))
@@ -149,7 +148,7 @@ pub async fn process_manual_sign_in(pool: &SqlitePool, user_id: i64) -> Result<b
     let recorded = record_sign_in_day(pool, user_id, now).await?;
 
     if !recorded {
-        tracing::info!("User {} already signed in today", user_id);
+        tracing::info!("Sign-in already recorded today");
     }
 
     Ok(recorded)
@@ -185,7 +184,7 @@ pub async fn reset_daily_counters(pool: &SqlitePool, user_id: i64) -> Result<()>
     .execute(pool)
     .await?;
 
-    tracing::info!("Reset daily counters for user {}", user_id);
+    tracing::info!("Reset daily counters");
     Ok(())
 }
 
@@ -214,8 +213,7 @@ pub async fn reset_weekly_counters(pool: &SqlitePool, user_id: i64) -> Result<()
         }
 
         tracing::info!(
-            "Reset weekly store_goods for user {}: {} items reset",
-            user_id,
+            "Reset weekly store_goods: {} items reset",
             weekly_store_goods.len()
         );
     }
@@ -241,17 +239,13 @@ pub async fn reset_weekly_counters(pool: &SqlitePool, user_id: i64) -> Result<()
         }
 
         tracing::info!(
-            "Reset weekly store_charge_goods for user {}: {} items reset",
-            user_id,
+            "Reset weekly store_charge_goods: {} items reset",
             weekly_charge_goods.len()
         );
     }
 
     if weekly_store_goods.is_empty() && weekly_charge_goods.is_empty() {
-        tracing::info!(
-            "Reset weekly counters for user {} (no weekly items)",
-            user_id
-        );
+        tracing::info!("Reset weekly counters (no weekly items)");
     }
 
     Ok(())
@@ -291,8 +285,7 @@ pub async fn reset_monthly_counters(pool: &SqlitePool, user_id: i64) -> Result<(
         }
 
         tracing::info!(
-            "Reset monthly store_goods for user {}: {} items reset",
-            user_id,
+            "Reset monthly store_goods: {} items reset",
             monthly_store_goods.len()
         );
     }
@@ -320,17 +313,13 @@ pub async fn reset_monthly_counters(pool: &SqlitePool, user_id: i64) -> Result<(
         }
 
         tracing::info!(
-            "Reset monthly store_charge_goods for user {}: {} items reset",
-            user_id,
+            "Reset monthly store_charge_goods: {} items reset",
             monthly_charge_goods.len()
         );
     }
 
     if monthly_store_goods.is_empty() && monthly_charge_goods.is_empty() {
-        tracing::info!(
-            "Reset monthly counters for user {} (no monthly items)",
-            user_id
-        );
+        tracing::info!("Reset monthly counters (no monthly items)");
     }
 
     Ok(())

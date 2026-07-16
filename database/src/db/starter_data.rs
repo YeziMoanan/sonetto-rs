@@ -135,9 +135,8 @@ pub async fn load_critter_info(tx: &mut Transaction<'_, Sqlite>, uid: i64) -> sq
     }
 
     tracing::info!(
-        "Loaded {} critters for uid {} starting from UID 10000000",
-        array.len(),
-        uid
+        "Loaded {} starter critters starting from UID 10000000",
+        array.len()
     );
     Ok(())
 }
@@ -659,12 +658,7 @@ pub async fn load_hero_list(
                     }
                 }
 
-                tracing::debug!(
-                    "Loaded {} talent cubes for hero {} (uid {})",
-                    cubes.len(),
-                    hero_id,
-                    hero_uid
-                );
+                tracing::debug!("Loaded {} talent cubes for hero {}", cubes.len(), hero_id);
             }
         } else {
             // IMPORTANT: Even if hero has no talent data, we still need to create 4 empty templates
@@ -713,9 +707,8 @@ pub async fn load_hero_list(
     .await?;
 
     tracing::info!(
-        "Generated {} level 1 starter heroes from excel data for uid {}",
-        characters.len(),
-        uid
+        "Generated {} level 1 starter heroes from excel data",
+        characters.len()
     );
     Ok(())
 }
@@ -785,7 +778,7 @@ pub async fn load_equipment(
         equip_map.entry(equip.id).or_insert(equip_uid);
     }
 
-    tracing::info!("Loaded {} equipment for uid {}", equipment_list.len(), uid);
+    tracing::info!("Loaded {} starter equipment records", equipment_list.len());
     Ok(equip_map)
 }
 
@@ -930,12 +923,11 @@ pub async fn load_starter_items(
     }
 
     tracing::info!(
-        "Loaded {} stackable items, {} non-stackable items, {} power items, {} insight items for user {}",
+        "Loaded {} stackable items, {} non-stackable items, {} power items, {} insight items",
         stackable_items.len(),
         non_stackable_items.len(),
         power_items.len(),
-        insight_items.len(),
-        user_id
+        insight_items.len()
     );
 
     Ok(())
@@ -974,11 +966,7 @@ pub async fn load_starter_currencies(
         .await?;
     }
 
-    tracing::info!(
-        "Loaded {} currencies for user {}",
-        game_data.currency.len(),
-        user_id
-    );
+    tracing::info!("Loaded {} starter currencies", game_data.currency.len());
 
     Ok(())
 }
@@ -1007,11 +995,7 @@ pub async fn load_starter_guides(
         .await?;
     }
 
-    tracing::info!(
-        "Loaded {} guides for user {}",
-        game_data.guide.len(),
-        user_id
-    );
+    tracing::info!("Loaded {} starter guides", game_data.guide.len());
 
     Ok(())
 }
@@ -1032,7 +1016,7 @@ pub async fn load_starter_user_stats(
     .execute(&mut **tx)
     .await?;
 
-    tracing::info!("Loaded starter user stats for user {}", user_id);
+    tracing::info!("Loaded starter user stats");
 
     Ok(())
 }
@@ -1178,7 +1162,7 @@ pub async fn load_starter_hero_groups(
         }
     }
 
-    tracing::info!("Loaded hero groups from JSON for user {}", user_id);
+    tracing::info!("Loaded starter hero groups from JSON");
     Ok(())
 }
 
@@ -1341,11 +1325,7 @@ pub async fn load_hero_group_snapshots(
         }
     }
 
-    tracing::info!(
-        "Loaded {} hero group snapshots for user {}",
-        snapshots.len(),
-        user_id
-    );
+    tracing::info!("Loaded {} starter hero group snapshots", snapshots.len());
     Ok(())
 }
 
@@ -1559,7 +1539,7 @@ pub async fn load_dungeon_info(tx: &mut Transaction<'_, Sqlite>, user_id: i64) -
         }
     }
 
-    tracing::info!("Loaded dungeon info for user {}", user_id);
+    tracing::info!("Loaded starter dungeon info");
     Ok(())
 }
 
@@ -1605,11 +1585,7 @@ pub async fn load_dungeon_infos(
         .await?;
     }
 
-    tracing::info!(
-        "Loaded dungeon infos {} for user {}",
-        dungeon_infos.len(),
-        user_id
-    );
+    tracing::info!("Loaded {} starter dungeon records", dungeon_infos.len());
     Ok(())
 }
 
@@ -1660,7 +1636,7 @@ pub async fn load_story_data(tx: &mut Transaction<'_, Sqlite>, user_id: i64) -> 
         }
     }
 
-    tracing::info!("Loaded story data for user {}", user_id);
+    tracing::info!("Loaded starter story data");
     Ok(())
 }
 
@@ -1725,7 +1701,7 @@ pub async fn load_charge_info(tx: &mut Transaction<'_, Sqlite>, user_id: i64) ->
     .execute(&mut **tx)
     .await?;
 
-    tracing::info!("Loaded charge info for user {}", user_id);
+    tracing::info!("Loaded starter charge info");
     Ok(())
 }
 
@@ -1772,7 +1748,7 @@ pub async fn load_block_package_info(
         }
     }
 
-    tracing::info!("Loaded block package info for user {}", user_id);
+    tracing::info!("Loaded starter block package info");
     Ok(())
 }
 
@@ -1818,11 +1794,7 @@ pub async fn load_building_info(
             building_uid += 1;
         }
 
-        tracing::info!(
-            "Loaded {} buildings for user {}",
-            building_infos.len(),
-            user_id
-        );
+        tracing::info!("Loaded {} starter buildings", building_infos.len());
     }
 
     Ok(())
@@ -2062,7 +2034,7 @@ pub async fn load_room_info(tx: &mut Transaction<'_, Sqlite>, user_id: i64) -> s
     .execute(&mut **tx)
     .await?;
 
-    tracing::info!("Loaded room info for user {}", user_id);
+    tracing::info!("Loaded starter room info");
     Ok(())
 }
 
@@ -2139,7 +2111,7 @@ pub async fn load_character_interaction_info(
         .execute(&mut **tx)
         .await?;
 
-    tracing::info!("Loaded character interaction info for user {}", user_id);
+    tracing::info!("Loaded starter character interaction info");
     Ok(())
 }
 
@@ -2390,7 +2362,7 @@ pub async fn load_summon_info(tx: &mut Transaction<'_, Sqlite>, user_id: i64) ->
         }
     }
 
-    tracing::info!("Loaded summon info for user {}", user_id);
+    tracing::info!("Loaded starter summon info");
     Ok(())
 }
 
@@ -2498,7 +2470,7 @@ pub async fn load_summon_history(
         }
     }
 
-    tracing::info!("Loaded summon history for user {}", user_id);
+    tracing::info!("Loaded starter summon history");
     Ok(())
 }
 
@@ -2540,7 +2512,7 @@ pub async fn load_achievement_info(
         }
     }
 
-    tracing::info!("Loaded achievement info for user {}", user_id);
+    tracing::info!("Loaded starter achievement info");
     Ok(())
 }
 
@@ -2567,7 +2539,7 @@ pub async fn load_dialog_info(tx: &mut Transaction<'_, Sqlite>, user_id: i64) ->
         }
     }
 
-    tracing::info!("Loaded dialog info for user {}", user_id);
+    tracing::info!("Loaded starter dialog info");
     Ok(())
 }
 
@@ -2590,7 +2562,7 @@ pub async fn load_starter_antiques(
             .await?;
     }
 
-    tracing::info!("Loaded {} antiques for user {}", antiques.len(), user_id);
+    tracing::info!("Loaded {} starter antiques", antiques.len());
     Ok(())
 }
 
@@ -2881,7 +2853,7 @@ pub async fn load_weekwalk_info(
         }
     }
 
-    tracing::info!("Loaded weekwalk info for user {}", user_id);
+    tracing::info!("Loaded starter weekwalk info");
     Ok(())
 }
 
@@ -3193,7 +3165,7 @@ pub async fn load_weekwalk_v2_info(
         }
     }
 
-    tracing::info!("Loaded weekwalk v2 info for user {}", user_id);
+    tracing::info!("Loaded starter weekwalk v2 info");
     Ok(())
 }
 
@@ -3391,7 +3363,7 @@ pub async fn load_explore_simple_info(
         }
     }
 
-    tracing::info!("Loaded explore simple info for user {}", user_id);
+    tracing::info!("Loaded starter explore simple info");
     Ok(())
 }
 
@@ -3726,7 +3698,7 @@ pub async fn load_tower_info(tx: &mut Transaction<'_, Sqlite>, user_id: i64) -> 
         }
     }
 
-    tracing::info!("Loaded tower info for user {}", user_id);
+    tracing::info!("Loaded starter tower info");
     Ok(())
 }
 
@@ -3791,7 +3763,7 @@ pub async fn load_player_card_info(
         .await?;
     }
 
-    tracing::info!("Loaded player card info for user {}", user_id);
+    tracing::info!("Loaded starter player card info");
     Ok(())
 }
 
@@ -3975,7 +3947,7 @@ pub async fn load_command_post_info(
         }
     }
 
-    tracing::info!("Loaded command post info for user {}", user_id);
+    tracing::info!("Loaded starter command post info");
     Ok(())
 }
 
@@ -4024,7 +3996,7 @@ pub async fn load_friend_info(tx: &mut Transaction<'_, Sqlite>, user_id: i64) ->
         }
     }
 
-    tracing::info!("Loaded friend info for user {}", user_id);
+    tracing::info!("Loaded starter friend info");
     Ok(())
 }
 
@@ -4062,7 +4034,7 @@ pub async fn load_simple_properties(
         }
     }
 
-    tracing::info!("Loaded simple properties for user {}", user_id);
+    tracing::info!("Loaded starter simple properties");
     Ok(())
 }
 
@@ -4140,7 +4112,7 @@ async fn load_activity101_from_json(
         .await?;
     }
 
-    tracing::info!("Loaded activity 101 ({}) for user {}", activity_id, user_id);
+    tracing::info!("Loaded starter activity 101 ({})", activity_id);
     Ok(())
 }
 
@@ -4176,7 +4148,7 @@ pub async fn load_starter_bgm(tx: &mut Transaction<'_, Sqlite>, user_id: i64) ->
     .execute(&mut **tx)
     .await?;
 
-    tracing::info!("Loaded starter bgm for user {}", user_id);
+    tracing::info!("Loaded starter bgm");
 
     Ok(())
 }
@@ -4227,12 +4199,12 @@ pub async fn load_starter_mail(tx: &mut Transaction<'_, Sqlite>, uid: i64) -> sq
     .execute(&mut **tx)
     .await?;
 
-    tracing::info!("Created welcome mail {} for new user {}", base_incr_id, uid);
+    tracing::info!("Created welcome mail {}", base_incr_id);
     Ok(())
 }
 
 pub async fn load_all_starter_data(pool: &SqlitePool, uid: i64) -> sqlx::Result<()> {
-    tracing::info!("Loading all starter data for uid {uid} in a single transaction");
+    tracing::info!("Loading all starter data in a single transaction");
 
     let mut tx = pool.begin().await?;
 
@@ -4275,6 +4247,6 @@ pub async fn load_all_starter_data(pool: &SqlitePool, uid: i64) -> sqlx::Result<
 
     tx.commit().await?;
 
-    tracing::info!("Finished loading all starter data for uid {uid}");
+    tracing::info!("Finished loading all starter data");
     Ok(())
 }

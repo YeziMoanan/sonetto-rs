@@ -33,7 +33,7 @@ pub async fn post(
     State(state): State<AppState>,
     axum::Json(req): axum::Json<AccountAutoLoginReq>,
 ) -> Json<AccountLoginRsp> {
-    tracing::info!("Auto-login attempt - User ID: {}", req.user_id);
+    tracing::info!("Auto-login attempt");
 
     // Generate new tokens
     let new_token = generate_token();
@@ -56,37 +56,25 @@ pub async fn post(
         Ok(user) => user,
         Err(e) if should_recover_local_auto_login(&e) => {
             let user_id = req.user_id as i64;
-            tracing::warn!(
-                "Auto-login local recovery for user {} after: {}",
-                user_id,
-                e
-            );
+            tracing::warn!("Auto-login local recovery");
 
             match get_user_by_id(&state, user_id).await {
                 Ok(_) => {
-                    if let Err(update_error) =
+                    if let Err(_update_error) =
                         update_user_login(&state.game.db, user_id, &token_info, now).await
                     {
-                        tracing::error!(
-                            "Failed to refresh recovered local user {}: {}",
-                            user_id,
-                            update_error
-                        );
+                        tracing::error!("Failed to refresh recovered local user");
                         return Json(create_auth_error_response());
                     }
                 }
                 Err(_) => {
                     let email = format!("cached_{}@local.sonetto", user_id);
                     let password = format!("cached:{}", user_id);
-                    if let Err(create_error) =
+                    if let Err(_create_error) =
                         create_user(&state.game.db, user_id, &email, &password, &token_info, now)
                             .await
                     {
-                        tracing::error!(
-                            "Failed to create recovered local user {}: {}",
-                            user_id,
-                            create_error
-                        );
+                        tracing::error!("Failed to create recovered local user");
                         return Json(create_auth_error_response());
                     }
                 }
@@ -94,26 +82,22 @@ pub async fn post(
 
             match get_user_by_id(&state, user_id).await {
                 Ok(user) => user,
-                Err(fetch_error) => {
-                    tracing::error!(
-                        "Failed to fetch recovered local user {}: {}",
-                        user_id,
-                        fetch_error
-                    );
+                Err(_fetch_error) => {
+                    tracing::error!("Failed to fetch recovered local user");
                     return Json(create_auth_error_response());
                 }
             }
         }
-        Err(e) => {
-            tracing::warn!("Auto-login failed: {}", e);
+        Err(_error) => {
+            tracing::warn!("Auto-login failed");
             return Json(create_auth_error_response());
         }
     };
 
-    if let Err(e) = update_user_login(&state.game.db, user.user_id, &token_info, now).await {
-        tracing::error!("Failed to update tokens: {}", e);
+    if let Err(_error) = update_user_login(&state.game.db, user.user_id, &token_info, now).await {
+        tracing::error!("Failed to update tokens");
     }
 
-    tracing::info!("Auto-login successful for user {}", req.user_id);
+    tracing::info!("Auto-login successful");
     Json(build_login_response(&user, new_token, new_refresh_token))
 }

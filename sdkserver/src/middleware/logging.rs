@@ -63,9 +63,10 @@ mod tests {
     };
     use axum::{
         Router,
-        body::Body,
+        body::{Body, to_bytes},
         http::{Method, Request, StatusCode, header},
         middleware,
+        response::Response,
         routing::post,
     };
     use gameserver::state::AppState as GameState;
@@ -109,8 +110,11 @@ mod tests {
 
     async fn app_state() -> AppState {
         let db = SqlitePoolOptions::new()
-            .connect_lazy("sqlite::memory:")
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
             .unwrap();
+        database::run_migrations(&db).await.unwrap();
 
         AppState {
             sdk: SdkState {
@@ -118,6 +122,56 @@ mod tests {
             },
             game: Arc::new(GameState::new(db)),
         }
+    }
+
+    async fn insert_user(state: &AppState, user_id: i64, email: &str, password: &str, token: &str) {
+        let password_hash = bcrypt::hash(password, 4).unwrap();
+        sqlx::query(
+            r#"INSERT INTO users (
+                    id, username, email, password_hash, token, refresh_token,
+                    token_expires_at, created_at, updated_at, last_login_at
+                ) VALUES (?1, ?2, ?3, ?4, ?5, 'refresh', ?6, 1, 1, 1)"#,
+        )
+        .bind(user_id)
+        .bind(format!("test-user-{user_id}"))
+        .bind(email)
+        .bind(password_hash)
+        .bind(token)
+        .bind(i64::MAX)
+        .execute(&state.game.db)
+        .await
+        .unwrap();
+    }
+
+    async fn response_json(response: Response) -> Value {
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        serde_json::from_slice(&body).unwrap()
+    }
+
+    async fn auto_login_response(state: AppState, user_id: i64, token: &str) -> Value {
+        let response = account_router()
+            .with_state(state)
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/login/autologin")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "deviceInfo": device_info("auto-device-secret", "auto-device-name"),
+                            "appPackageInfo": app_package_info(),
+                            "reactivate": false,
+                            "token": token,
+                            "userId": user_id,
+                            "accountType": 1
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        response_json(response).await
     }
 
     fn device_info(device_id: &str, device_name: &str) -> Value {
@@ -238,8 +292,39 @@ mod tests {
         let _guard = tracing::dispatcher::set_default(&dispatch);
         let state = app_state().await;
         let account = "account-secret@example.invalid";
+        let account_password = "password-secret";
+        let account_user_id = 8_123_456_789_011_i64;
         let device_id = "device-identifier-secret";
         let device_name = "device-name-secret";
+        let visitor_email = format!("visitor_{device_id}@local.sonetto");
+        let visitor_password = format!("visitor:{device_id}");
+        let visitor_user_id = 8_123_456_789_022_i64;
+        let auto_user_id = 8_123_456_789_033_i64;
+        let auto_token = "auto-token-secret";
+        insert_user(
+            &state,
+            account_user_id,
+            account,
+            account_password,
+            "mail-token",
+        )
+        .await;
+        insert_user(
+            &state,
+            visitor_user_id,
+            &visitor_email,
+            &visitor_password,
+            "visitor-token",
+        )
+        .await;
+        insert_user(
+            &state,
+            auto_user_id,
+            "auto-secret@example.invalid",
+            "auto-password-secret",
+            auto_token,
+        )
+        .await;
         let app = account_router()
             .merge(jsp_router())
             .merge(trade_router())
@@ -249,7 +334,7 @@ mod tests {
             "appPackageInfo": app_package_info(),
             "reactivate": false,
             "account": account,
-            "pwd": "password-secret"
+            "pwd": account_password
         });
         let login_response = app
             .clone()
@@ -264,13 +349,12 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(login_response.status(), StatusCode::OK);
-        let token = "token-secret-value";
-        let token_prefix = token.chars().take(8).collect::<String>();
+        assert_eq!(response_json(login_response).await["code"], 200);
         let verify_request = json!({
             "deviceInfo": device_info(device_id, device_name),
             "appPackageInfo": app_package_info(),
-            "userId": "1337",
-            "token": token,
+            "userId": auto_user_id.to_string(),
+            "token": auto_token,
             "extArgs": {}
         });
         let verify_response = app
@@ -286,16 +370,18 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(verify_response.status(), StatusCode::OK);
+        assert_eq!(response_json(verify_response).await["code"], 200);
         app.clone()
             .oneshot(
                 Request::builder()
-                    .uri(format!("/loadzone.jsp?sessionId={token}&zoneId=4"))
+                    .uri(format!("/loadzone.jsp?sessionId={auto_token}&zoneId=4"))
                     .body(Body::empty())
                     .unwrap(),
             )
             .await
             .unwrap();
-        app.clone()
+        let visitor_response = app
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(Method::POST)
@@ -308,6 +394,52 @@ mod tests {
             )
             .await
             .unwrap();
+        assert_eq!(response_json(visitor_response).await["code"], 200);
+        let auto_login_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/login/autologin")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "deviceInfo": device_info(device_id, device_name),
+                            "appPackageInfo": app_package_info(),
+                            "reactivate": false,
+                            "token": auto_token,
+                            "userId": auto_user_id,
+                            "accountType": 1
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response_json(auto_login_response).await["code"], 200);
+        let failed_login_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/login/mail")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "deviceInfo": device_info(device_id, device_name),
+                            "appPackageInfo": app_package_info(),
+                            "reactivate": false,
+                            "account": account,
+                            "pwd": "wrong-password-secret"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response_json(failed_login_response).await["code"], 401);
         let goods_request = json!({
             "deviceInfo": device_info(device_id, device_name),
             "appPackageInfo": app_package_info()
@@ -326,14 +458,182 @@ mod tests {
         let logs = writer.contents();
         for secret in [
             account,
+            account_password,
             device_id,
             device_name,
-            token_prefix.as_str(),
-            "1337",
+            auto_token,
+            "wrong-password-secret",
+            &account_user_id.to_string(),
+            &visitor_user_id.to_string(),
+            &auto_user_id.to_string(),
         ] {
             assert!(
                 !logs.contains(secret),
                 "handler log leaked {secret}: {logs}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn new_user_starter_failure_logs_no_account_or_user_identifier() {
+        let db = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        database::run_migrations(&db).await.unwrap();
+        sqlx::query("DROP TABLE critters")
+            .execute(&db)
+            .await
+            .unwrap();
+        let writer = CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_ansi(false)
+            .without_time()
+            .with_target(false)
+            .with_level(false)
+            .with_max_level(tracing::Level::TRACE)
+            .with_writer(writer.clone())
+            .finish();
+        let dispatch = tracing::Dispatch::new(subscriber);
+        let _guard = tracing::dispatcher::set_default(&dispatch);
+        let user_id = 8_123_456_789_044_i64;
+        let email = "new-user-secret@example.invalid";
+        let password = "new-user-password-secret";
+        let token = "new-user-token-secret";
+        let refresh_token = "new-user-refresh-secret";
+
+        let user = database::db::user::account::create_user(
+            &db,
+            user_id,
+            email,
+            password,
+            &database::db::user::account::TokenInfo {
+                token: token.to_string(),
+                refresh_token: refresh_token.to_string(),
+                expires_at: i64::MAX,
+            },
+            1,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(user.id, user_id);
+        let logs = writer.contents();
+        for secret in [
+            user_id.to_string(),
+            email.to_string(),
+            password.to_string(),
+            token.to_string(),
+            refresh_token.to_string(),
+        ] {
+            assert!(
+                !logs.contains(&secret),
+                "starter log leaked {secret}: {logs}"
+            );
+        }
+        assert!(logs.contains("Failed to load starter data"));
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn auto_login_recovery_paths_log_no_user_identifier_or_error_details() {
+        let writer = CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_ansi(false)
+            .without_time()
+            .with_target(false)
+            .with_level(false)
+            .with_max_level(tracing::Level::TRACE)
+            .with_writer(writer.clone())
+            .finish();
+        let dispatch = tracing::Dispatch::new(subscriber);
+        let _guard = tracing::dispatcher::set_default(&dispatch);
+
+        let refresh_state = app_state().await;
+        let refresh_user_id = 8_123_456_789_055_i64;
+        insert_user(
+            &refresh_state,
+            refresh_user_id,
+            "refresh-user@example.invalid",
+            "refresh-password",
+            "stored-refresh-token",
+        )
+        .await;
+        let refresh_error = format!("refresh-private-{refresh_user_id}");
+        sqlx::query(&format!(
+            "CREATE TRIGGER fail_auto_refresh BEFORE UPDATE ON users BEGIN SELECT RAISE(FAIL, '{refresh_error}'); END"
+        ))
+        .execute(&refresh_state.game.db)
+        .await
+        .unwrap();
+        assert_eq!(
+            auto_login_response(refresh_state, refresh_user_id, "stale-refresh-token").await["code"],
+            401
+        );
+
+        let create_state = app_state().await;
+        let create_user_id = 8_123_456_789_066_i64;
+        sqlx::query(
+            "INSERT INTO users (id, username, created_at, updated_at) VALUES (1, ?1, 1, 1)",
+        )
+        .bind(format!("cached_{create_user_id}"))
+        .execute(&create_state.game.db)
+        .await
+        .unwrap();
+        assert_eq!(
+            auto_login_response(create_state, create_user_id, "missing-user-token").await["code"],
+            401
+        );
+
+        let fetch_state = app_state().await;
+        let fetch_user_id = 8_123_456_789_077_i64;
+        insert_user(
+            &fetch_state,
+            fetch_user_id,
+            "fetch-user@example.invalid",
+            "fetch-password",
+            "stored-fetch-token",
+        )
+        .await;
+        sqlx::query(
+            "CREATE TRIGGER remove_auto_user AFTER UPDATE ON users BEGIN DELETE FROM users WHERE id = NEW.id; END",
+        )
+        .execute(&fetch_state.game.db)
+        .await
+        .unwrap();
+        assert_eq!(
+            auto_login_response(fetch_state, fetch_user_id, "stale-fetch-token").await["code"],
+            401
+        );
+
+        let success_state = app_state().await;
+        let success_user_id = 8_123_456_789_088_i64;
+        sqlx::query("DROP TABLE critters")
+            .execute(&success_state.game.db)
+            .await
+            .unwrap();
+        assert_eq!(
+            auto_login_response(success_state, success_user_id, "missing-success-token").await["code"],
+            200
+        );
+
+        let logs = writer.contents();
+        for secret in [
+            refresh_user_id.to_string(),
+            create_user_id.to_string(),
+            fetch_user_id.to_string(),
+            success_user_id.to_string(),
+            refresh_error,
+            "auto-device-secret".to_string(),
+            "auto-device-name".to_string(),
+            "stale-refresh-token".to_string(),
+            "missing-user-token".to_string(),
+            "stale-fetch-token".to_string(),
+            "missing-success-token".to_string(),
+        ] {
+            assert!(
+                !logs.contains(&secret),
+                "auto-login log leaked {secret}: {logs}"
             );
         }
     }

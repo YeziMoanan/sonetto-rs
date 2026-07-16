@@ -87,11 +87,11 @@ impl ConnectionContext {
         .await?
         {
             Some(state) => {
-                tracing::info!("Loaded existing player state for player {}", player_id);
+                tracing::info!("Loaded existing player state");
                 state
             }
             None => {
-                tracing::info!("Creating new player state for player {}", player_id);
+                tracing::info!("Creating new player state");
                 let new_state = PlayerState::new(player_id, now);
 
                 self.save_player_state(&new_state).await?;
@@ -103,7 +103,7 @@ impl ConnectionContext {
         state.updated_at = now;
 
         self.player_state = Some(state);
-        tracing::info!("Loaded player state for player {}", player_id);
+        tracing::info!("Loaded player state");
         Ok(())
     }
 
@@ -423,7 +423,7 @@ impl ConnectionContext {
         let ctx_lock = ctx.lock().await;
         if let Some(player_id) = ctx_lock.player_id {
             ctx_lock.state.register_session(player_id, Arc::clone(&ctx));
-            tracing::info!("Registered session for player {}", player_id);
+            tracing::info!("Registered player session");
         } else {
             tracing::warn!("Attempted to register session without player_id");
         }

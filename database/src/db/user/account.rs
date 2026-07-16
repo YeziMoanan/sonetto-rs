@@ -215,9 +215,9 @@ pub async fn create_user(
     .await?;
 
     // Load all starter data (critters, achievements, items, etc.)
-    tracing::info!("Loading starter data for new user {}", user_id);
-    if let Err(e) = crate::db::starter_data::load_all_starter_data(pool, user_id).await {
-        tracing::error!("Failed to load starter data for user {}: {}", user_id, e);
+    tracing::info!("Loading starter data for new user");
+    if let Err(_error) = crate::db::starter_data::load_all_starter_data(pool, user_id).await {
+        tracing::error!("Failed to load starter data");
         // Don't fail user creation, but log the error
     }
 
