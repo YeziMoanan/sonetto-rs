@@ -4199,7 +4199,6 @@ pub async fn load_starter_mail(tx: &mut Transaction<'_, Sqlite>, uid: i64) -> sq
     .execute(&mut **tx)
     .await?;
 
-    tracing::info!("Created welcome mail {}", base_incr_id);
     Ok(())
 }
 

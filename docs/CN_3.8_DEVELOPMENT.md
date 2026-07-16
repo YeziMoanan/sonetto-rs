@@ -20,7 +20,7 @@
 - 当前直接请求证据中的 `userId` 是客户端传入的正十进制字符串。由于 APK 和请求证据均未建立渠道前缀，SDK verify、JSP login 的 `accountId` 与游戏 TCP 登录统一采用同一解析契约，并原样保留客户端值；不生成或接受未经证据支持的 `100_<uid>` / `200_<uid>` 前缀。
 - 客户端如何生成该十进制值仍需真实客户端闭环确认；服务端不得据此猜测渠道前缀。
 - SDK/JSP/TCP 登录日志只记录方法、路径、查询键、命令、阶段和长度等安全元数据，不记录 token、完整包、账号、用户名或设备标识。
-- 服务端自动化使用内存 SQLite migrations 与本地 TCP socket 覆盖 SDK mail/visitor/verify/autologin、autologin 恢复、TCP `on_login`、签到错误传播和连接收尾日志；这是服务端隔离测试证据，不代表真实 APK 已连接本地服务或完成登录。
+- 服务端自动化使用内存 SQLite migrations 与本地 TCP socket 覆盖 SDK mail/visitor/verify/autologin、verify/autologin 失败、欢迎邮件、TCP `on_login`、`handle_client` 错误阶段、签到错误传播和连接收尾日志；这是服务端隔离测试证据，不代表真实 APK 已连接本地服务或完成登录。
 
 ## 验证基线
 

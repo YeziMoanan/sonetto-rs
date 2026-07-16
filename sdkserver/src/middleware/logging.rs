@@ -536,6 +536,50 @@ mod tests {
     }
 
     #[tokio::test(flavor = "current_thread")]
+    async fn welcome_mail_creation_does_not_log_user_derived_increment_id() {
+        let db = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        database::run_migrations(&db).await.unwrap();
+        let writer = CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_ansi(false)
+            .without_time()
+            .with_target(false)
+            .with_level(false)
+            .with_max_level(tracing::Level::TRACE)
+            .with_writer(writer.clone())
+            .finish();
+        let dispatch = tracing::Dispatch::new(subscriber);
+        let _guard = tracing::dispatcher::set_default(&dispatch);
+        let user_id = 456_789_i64;
+        let derived_mail_id = 80_000_000_i64 + user_id * 1_000;
+        let mut tx = db.begin().await.unwrap();
+
+        database::db::starter_data::load_starter_mail(&mut tx, user_id)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+
+        let stored_mail_id: i64 =
+            sqlx::query_scalar("SELECT incr_id FROM user_mails WHERE user_id = ?1")
+                .bind(user_id)
+                .fetch_one(&db)
+                .await
+                .unwrap();
+        assert_eq!(stored_mail_id, derived_mail_id);
+        let logs = writer.contents();
+        for secret in [user_id.to_string(), derived_mail_id.to_string()] {
+            assert!(
+                !logs.contains(&secret),
+                "welcome mail log leaked derived identifier {secret}: {logs}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
     async fn auto_login_recovery_paths_log_no_user_identifier_or_error_details() {
         let writer = CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
