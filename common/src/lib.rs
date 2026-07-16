@@ -1,6 +1,7 @@
 use once_cell::sync::OnceCell;
 use std::path::PathBuf;
 
+pub mod account;
 pub mod config;
 pub mod time;
 

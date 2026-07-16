@@ -350,13 +350,6 @@ pub struct VerifyUserInfo {
     pub is_pay_account: bool,
 }
 
-#[allow(dead_code)]
-impl VerifyUserInfo {
-    pub fn user_id(uid: u64) -> String {
-        format!("200_{}", uid)
-    }
-}
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SummonQueryRsp {

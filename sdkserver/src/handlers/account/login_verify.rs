@@ -3,6 +3,7 @@ use crate::AppState;
 use crate::models::request::AccountLoginVerifyReq;
 use crate::models::response::{AccountLoginVerifyRsp, AccountLoginVerifyRspData, VerifyUserInfo};
 use axum::{extract::State, response::Json};
+use common::account::parse_user_id;
 
 const CN_CHANNEL_ID: i32 = 100;
 const INTERNATIONAL_GAME_ID: i64 = 60001;
@@ -29,16 +30,12 @@ pub async fn post(
 ) -> Json<AccountLoginVerifyRsp> {
     let channel_id = requested_channel_id(&req);
 
-    // Parse user_id from string
-    let user_id: i64 = match req.user_id.parse() {
-        Ok(id) => id,
-        Err(_) => {
-            tracing::error!("Invalid user_id format: {}", req.user_id);
-            return Json(create_verify_error_response(channel_id));
-        }
+    let Some(user_id) = parse_user_id(&req.user_id) else {
+        tracing::warn!("Login verify rejected invalid user ID format");
+        return Json(create_verify_error_response(channel_id));
     };
 
-    tracing::debug!("Login verify request - User ID: {}", user_id);
+    tracing::debug!("Login verify request parsed");
 
     // Validate token and get user
     let user = match get_user_with_token_validation(&state, user_id, &req.token).await {
@@ -53,7 +50,7 @@ pub async fn post(
     let register_time = format_timestamp(user.created_at);
     let first_join_time = format_timestamp(user.last_login_at);
 
-    tracing::info!("Login verify successful for user {}", user_id);
+    tracing::info!("Login verify successful");
 
     let rsp = AccountLoginVerifyRsp {
         code: 200,

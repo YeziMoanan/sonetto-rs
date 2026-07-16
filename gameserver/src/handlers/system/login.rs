@@ -17,7 +17,7 @@ pub async fn on_login(
     tracing::info!("→ Starting login handler");
     let login = parse_login_request(&req.data)?;
     let user_id = extract_user_id(&login.account_id)?;
-    tracing::info!("→ Login attempt user_id={}", user_id);
+    tracing::info!("→ Login attempt parsed");
 
     let (stored_token, token_expires_at) = {
         let db = {
@@ -44,7 +44,7 @@ pub async fn on_login(
         return login_error(&ctx, "Token expired", req.up_tag).await;
     }
 
-    tracing::info!("✓ Token validated for user_id={}", user_id);
+    tracing::info!("✓ Login token validated");
 
     {
         let mut conn = ctx.lock().await;
@@ -178,11 +178,7 @@ pub async fn on_login(
         }
 
         if !new_mails.is_empty() {
-            tracing::info!(
-                "Sent {} new mail notifications to user {}",
-                new_mails.len(),
-                user_id
-            );
+            tracing::info!("Sent {} new mail notifications", new_mails.len());
         }
     }
 
@@ -194,6 +190,6 @@ pub async fn on_login(
     }
 
     ConnectionContext::register(Arc::clone(&ctx)).await;
-    tracing::info!("✓ Login successful for user_id={}", user_id);
+    tracing::info!("✓ Login successful");
     Ok(())
 }

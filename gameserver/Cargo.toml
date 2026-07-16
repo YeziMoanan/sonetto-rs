@@ -23,3 +23,6 @@ config.workspace = true
 chrono.workspace = true
 rand.workspace = true
 once_cell.workspace = true
+
+[dev-dependencies]
+tracing-subscriber.workspace = true

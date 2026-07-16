@@ -324,11 +324,109 @@ mod tests {
         .unwrap();
 
         let logs = writer.contents();
-        for secret in [account, device_id, device_name, token_prefix.as_str()] {
+        for secret in [
+            account,
+            device_id,
+            device_name,
+            token_prefix.as_str(),
+            "1337",
+        ] {
             assert!(
                 !logs.contains(secret),
                 "handler log leaked {secret}: {logs}"
             );
         }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn jsp_handlers_log_metadata_without_accounts_tokens_or_usernames() {
+        let writer = CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_ansi(false)
+            .without_time()
+            .with_target(false)
+            .with_level(false)
+            .with_max_level(tracing::Level::TRACE)
+            .with_writer(writer.clone())
+            .finish();
+        let dispatch = tracing::Dispatch::new(subscriber);
+        let _guard = tracing::dispatcher::set_default(&dispatch);
+        let db = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE users (id INTEGER PRIMARY KEY, token TEXT, account_tags TEXT, username TEXT, level INTEGER)",
+        )
+        .execute(&db)
+        .await
+        .unwrap();
+        let account_id = "4242424242";
+        let token = "jsp-token-secret";
+        let username = "jsp-account-secret";
+        sqlx::query(
+            "INSERT INTO users (id, token, account_tags, username, level) VALUES (?1, ?2, '', ?3, 1)",
+        )
+        .bind(4_242_424_242_i64)
+        .bind(token)
+        .bind(username)
+        .execute(&db)
+        .await
+        .unwrap();
+        let state = AppState {
+            sdk: SdkState {
+                http_client: Client::new(),
+            },
+            game: Arc::new(GameState::new(db)),
+        };
+        let app = jsp_router()
+            .with_state(state)
+            .layer(middleware::from_fn(full_logger));
+
+        let login_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!(
+                        "/login.jsp?slSessionId={token}&clientVersion=3.8.0&sysType=2&accountId={account_id}&channelId=100&subChannelId=1000"
+                    ))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(login_response.status(), StatusCode::OK);
+        let load_zone_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/loadzone.jsp?sessionId={token}&zoneId=4"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(load_zone_response.status(), StatusCode::OK);
+        let invalid_account = "invalid-account-secret";
+        let invalid_login_response = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!(
+                        "/login.jsp?slSessionId={token}&clientVersion=3.8.0&sysType=2&accountId={invalid_account}&channelId=100&subChannelId=1000"
+                    ))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(invalid_login_response.status(), StatusCode::OK);
+
+        let logs = writer.contents();
+        for secret in [account_id, token, username, invalid_account] {
+            assert!(!logs.contains(secret), "JSP log leaked {secret}: {logs}");
+        }
+        assert!(logs.contains("path=/login.jsp"));
+        assert!(logs.contains("path=/loadzone.jsp"));
     }
 }
