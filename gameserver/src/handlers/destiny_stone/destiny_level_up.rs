@@ -6,17 +6,17 @@ use config::destiny::DestinyConfigIndex;
 use database::db::game::destiny::execute_destiny_command;
 use database::models::game::destiny::DestinyCommand;
 use prost::Message;
-use sonettobuf::{CmdId, DestinyStoneUseReply, DestinyStoneUseRequest};
+use sonettobuf::{CmdId, DestinyLevelUpReply, DestinyLevelUpRequest};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-pub async fn on_destiny_stone_use(
+pub async fn on_destiny_level_up(
     ctx: Arc<Mutex<ConnectionContext>>,
     req: ClientPacket,
 ) -> Result<(), AppError> {
-    let request = DestinyStoneUseRequest::decode(&req.data[..])?;
+    let request = DestinyLevelUpRequest::decode(&req.data[..])?;
     let hero_id = request.hero_id.ok_or(AppError::InvalidRequest)?;
-    let stone_id = request.stone_id.ok_or(AppError::InvalidRequest)?;
+    let target_level = request.level.ok_or(AppError::InvalidRequest)?;
     let (player_id, pool) = {
         let conn = ctx.lock().await;
         (
@@ -25,26 +25,29 @@ pub async fn on_destiny_stone_use(
         )
     };
     let catalog = DestinyConfigIndex::try_from_game_db(config::configs::get())?;
-    let reply = DestinyStoneUseReply {
-        hero_id: Some(hero_id),
-        stone_id: Some(stone_id),
-    };
 
     match execute_destiny_command(
         &pool,
         player_id,
         &catalog,
-        DestinyCommand::UseStone { hero_id, stone_id },
+        DestinyCommand::LevelUp {
+            hero_id,
+            target_level,
+        },
     )
     .await
     {
         Ok(change) => {
+            let committed_level = change.state.level;
             send_destiny_success(
                 Arc::clone(&ctx),
                 player_id,
                 change,
-                CmdId::DestinyStoneUseCmd,
-                reply,
+                CmdId::DestinyLevelUpCmd,
+                DestinyLevelUpReply {
+                    hero_id: Some(hero_id),
+                    level: Some(committed_level),
+                },
                 req.up_tag,
             )
             .await
@@ -54,13 +57,23 @@ pub async fn on_destiny_stone_use(
             tracing::warn!(
                 player_id,
                 hero_id,
-                stone_id,
-                command = "DestinyStoneUse",
+                target_level,
+                command = "DestinyLevelUp",
                 failure = ?failure,
                 error = %error,
                 "Destiny command rejected"
             );
-            send_destiny_failure(ctx, CmdId::DestinyStoneUseCmd, reply, failure, req.up_tag).await
+            send_destiny_failure(
+                ctx,
+                CmdId::DestinyLevelUpCmd,
+                DestinyLevelUpReply {
+                    hero_id: Some(hero_id),
+                    level: Some(target_level),
+                },
+                failure,
+                req.up_tag,
+            )
+            .await
         }
     }
 }

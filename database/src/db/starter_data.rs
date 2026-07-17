@@ -4,6 +4,55 @@ use sqlx::{Sqlite, SqlitePool, Transaction};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
 
+fn parse_destiny_facets(hero_id: i32, raw_facets: &str) -> sqlx::Result<Vec<i32>> {
+    let facets = raw_facets
+        .split('#')
+        .map(|value| {
+            value.parse::<i32>().map_err(|error| {
+                sqlx::Error::Protocol(format!(
+                    "invalid Destiny facet {value:?} for hero {hero_id}: {error}"
+                ))
+            })
+        })
+        .collect::<sqlx::Result<Vec<_>>>()?;
+
+    if facets.is_empty() {
+        return Err(sqlx::Error::Protocol(format!(
+            "missing Destiny facets for hero {hero_id}"
+        )));
+    }
+
+    Ok(facets)
+}
+
+fn starter_destiny_state(
+    game_data: &config::GameDB,
+    hero_id: i32,
+) -> sqlx::Result<(i32, i32, i32, Vec<i32>)> {
+    let Some(destiny_data) = game_data
+        .character_destiny
+        .iter()
+        .find(|record| record.hero_id == hero_id)
+    else {
+        return Ok((0, 0, 0, Vec::new()));
+    };
+
+    let terminal = game_data
+        .character_destiny_slots
+        .iter()
+        .filter(|slot| slot.slots_id == destiny_data.slots_id)
+        .max_by_key(|slot| (slot.stage, slot.node))
+        .ok_or_else(|| {
+            sqlx::Error::Protocol(format!(
+                "missing Destiny slot group {} for hero {hero_id}",
+                destiny_data.slots_id
+            ))
+        })?;
+    let facets = parse_destiny_facets(hero_id, &destiny_data.facets_id)?;
+
+    Ok((terminal.stage, terminal.node, facets[0], facets))
+}
+
 /// Load CritterInfo starter data from critter_info.json
 pub async fn load_critter_info(tx: &mut Transaction<'_, Sqlite>, uid: i64) -> sqlx::Result<()> {
     let json_str = include_str!("../../../assets/starter/critter_info.json");
@@ -287,30 +336,9 @@ pub async fn load_hero_list(
             .map(|s| s.id)
             .unwrap_or(hero_skin); // Fallback to i1 skin
 
-        // Get default destiny stone from character_destiny table
-        let destiny_data = game_data
-            .character_destiny
-            .iter()
-            .find(|d| d.hero_id == hero_id);
-
-        // Calculate destiny values ONLY if hero has destiny system
-        let (destiny_rank, destiny_level, destiny_stone, red_dot_type) =
-            if let Some(d) = destiny_data {
-                // Hero has destiny - set to max
-                let rank = max_rank; // Match hero's max rank
-                let level = 10; // Max destiny level
-                let stone = d
-                    .facets_id
-                    .split('#')
-                    .next()
-                    .and_then(|s| s.parse::<i32>().ok())
-                    .unwrap_or(0);
-                let red_dot_type = 6;
-                (rank, level, stone, red_dot_type)
-            } else {
-                // Hero doesn't have destiny system - all zeros
-                (0, 0, 0, 0)
-            };
+        let (destiny_rank, destiny_level, destiny_stone, destiny_facets) =
+            starter_destiny_state(game_data, hero_id)?;
+        let red_dot_type = if destiny_facets.is_empty() { 0 } else { 6 };
 
         // equipRec can be "1527" or "1530#1428" (multiple options); take first
         let equip_id = character
@@ -558,25 +586,14 @@ pub async fn load_hero_list(
         .execute(&mut **tx)
         .await?;
 
-        // Insert destiny stone unlocks from character_destiny table
-        if let Some(destiny_data) = game_data
-            .character_destiny
-            .iter()
-            .find(|d| d.hero_id == hero_id)
-        {
-            // Parse facetsId string (e.g., "300901" or "300301#300302")
-            // Split by '#' to get all stone IDs
-            for stone_str in destiny_data.facets_id.split('#') {
-                if let Ok(stone_id) = stone_str.parse::<i32>() {
-                    sqlx::query(
-                        "INSERT INTO hero_destiny_stone_unlocks (hero_uid, stone_id) VALUES (?, ?)",
-                    )
-                    .bind(hero_uid)
-                    .bind(stone_id)
-                    .execute(&mut **tx)
-                    .await?;
-                }
-            }
+        for stone_id in destiny_facets {
+            sqlx::query(
+                "INSERT INTO hero_destiny_stone_unlocks (hero_uid, stone_id) VALUES (?, ?)",
+            )
+            .bind(hero_uid)
+            .bind(stone_id)
+            .execute(&mut **tx)
+            .await?;
         }
 
         // Insert talent unlocks from character_talent table

@@ -59,6 +59,9 @@ pub async fn dispatch_command(
         // special equipment for ezio
         CmdId::ChoiceHero3123WeaponCmd => hero::on_choice_hero_3123_weapon,
         // sets euphoria for heros
+        CmdId::DestinyRankUpCmd => destiny_stone::on_destiny_rank_up,
+        CmdId::DestinyLevelUpCmd => destiny_stone::on_destiny_level_up,
+        CmdId::DestinyStoneUnlockCmd => destiny_stone::on_destiny_stone_unlock,
         CmdId::DestinyStoneUseCmd => destiny_stone::on_destiny_stone_use,
         CmdId::HeroUpgradeSkillCmd => hero::on_hero_upgrade_skill,
         CmdId::UnMarkIsNewCmd => hero::on_unmark_is_new,

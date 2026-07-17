@@ -10,6 +10,7 @@ pub mod charges;
 pub mod command_post;
 pub mod critters;
 pub mod currencies;
+pub mod destiny;
 pub mod dialogs;
 pub mod dungeons;
 pub mod equipment;

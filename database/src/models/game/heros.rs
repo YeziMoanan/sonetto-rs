@@ -850,23 +850,11 @@ impl HeroModel<HeroData> for UserHeroModel {
             .iter()
             .find(|d| d.hero_id == hero_id);
 
-        let (destiny_rank, destiny_level, destiny_stone, red_dot_type) =
-            if let Some(d) = destiny_data {
-                // Hero has destiny - start at 1
-                let rank = min_rank;
-                let level = 1;
-                let stone = d
-                    .facets_id
-                    .split('#')
-                    .next()
-                    .and_then(|s| s.parse::<i32>().ok())
-                    .unwrap_or(0);
-                let red_dot_type = 6;
-                (rank, level, stone, red_dot_type)
-            } else {
-                // Hero doesn't have destiny system
-                (0, 0, 0, 0)
-            };
+        let (destiny_rank, destiny_level, destiny_stone, red_dot_type) = if destiny_data.is_some() {
+            (0, 0, 0, 6)
+        } else {
+            (0, 0, 0, 0)
+        };
 
         let equip_id = character
             .equip_rec
@@ -1064,20 +1052,6 @@ impl HeroModel<HeroData> for UserHeroModel {
         .bind(0) // Starting at 0 birthday celebrations
         .execute(&self.pool)
         .await?;
-
-        if let Some(destiny_data) = destiny_data {
-            for stone_str in destiny_data.facets_id.split('#') {
-                if let Ok(stone_id) = stone_str.parse::<i32>() {
-                    sqlx::query(
-                        "INSERT INTO hero_destiny_stone_unlocks (hero_uid, stone_id) VALUES (?, ?)",
-                    )
-                    .bind(hero_uid)
-                    .bind(stone_id)
-                    .execute(&self.pool)
-                    .await?;
-                }
-            }
-        }
 
         let talent_config = game_data
             .character_talent

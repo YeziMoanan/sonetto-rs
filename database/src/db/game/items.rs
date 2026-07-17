@@ -1,6 +1,46 @@
 use crate::models::game::items::{InsightItem, Item, PowerItem};
 use common::time::ServerTime;
-use sqlx::SqlitePool;
+use sqlx::{Sqlite, SqliteConnection, SqlitePool, Transaction};
+
+use crate::models::game::destiny::{MaterialCost, MaterialKind};
+
+pub async fn deduct_item_if_sufficient(
+    tx: &mut Transaction<'_, Sqlite>,
+    user_id: i64,
+    cost: MaterialCost,
+    now_ms: i64,
+) -> sqlx::Result<bool> {
+    deduct_item_if_sufficient_on_connection(&mut **tx, user_id, cost, now_ms).await
+}
+
+pub(crate) async fn deduct_item_if_sufficient_on_connection(
+    connection: &mut SqliteConnection,
+    user_id: i64,
+    cost: MaterialCost,
+    now_ms: i64,
+) -> sqlx::Result<bool> {
+    if cost.kind != MaterialKind::Item || cost.id <= 0 || cost.amount <= 0 {
+        return Err(sqlx::Error::Protocol(format!(
+            "invalid item material cost: kind={:?}, id={}, amount={}",
+            cost.kind, cost.id, cost.amount
+        )));
+    }
+    let result = sqlx::query(
+        "UPDATE items
+         SET quantity = quantity - ?, last_use_time = ?, last_update_time = ?
+         WHERE user_id = ? AND item_id = ? AND quantity >= ?",
+    )
+    .bind(cost.amount)
+    .bind(now_ms)
+    .bind(now_ms)
+    .bind(user_id)
+    .bind(cost.id)
+    .bind(cost.amount)
+    .execute(connection)
+    .await?;
+
+    Ok(result.rows_affected() == 1)
+}
 // Items
 pub async fn get_all_items(pool: &SqlitePool, user_id: i64) -> sqlx::Result<Vec<Item>> {
     sqlx::query_as("SELECT * FROM items WHERE user_id = ? ORDER BY item_id")

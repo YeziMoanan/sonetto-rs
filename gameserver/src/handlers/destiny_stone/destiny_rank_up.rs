@@ -6,17 +6,16 @@ use config::destiny::DestinyConfigIndex;
 use database::db::game::destiny::execute_destiny_command;
 use database::models::game::destiny::DestinyCommand;
 use prost::Message;
-use sonettobuf::{CmdId, DestinyStoneUseReply, DestinyStoneUseRequest};
+use sonettobuf::{CmdId, DestinyRankUpReply, DestinyRankUpRequest};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-pub async fn on_destiny_stone_use(
+pub async fn on_destiny_rank_up(
     ctx: Arc<Mutex<ConnectionContext>>,
     req: ClientPacket,
 ) -> Result<(), AppError> {
-    let request = DestinyStoneUseRequest::decode(&req.data[..])?;
+    let request = DestinyRankUpRequest::decode(&req.data[..])?;
     let hero_id = request.hero_id.ok_or(AppError::InvalidRequest)?;
-    let stone_id = request.stone_id.ok_or(AppError::InvalidRequest)?;
     let (player_id, pool) = {
         let conn = ctx.lock().await;
         (
@@ -25,16 +24,15 @@ pub async fn on_destiny_stone_use(
         )
     };
     let catalog = DestinyConfigIndex::try_from_game_db(config::configs::get())?;
-    let reply = DestinyStoneUseReply {
+    let reply = DestinyRankUpReply {
         hero_id: Some(hero_id),
-        stone_id: Some(stone_id),
     };
 
     match execute_destiny_command(
         &pool,
         player_id,
         &catalog,
-        DestinyCommand::UseStone { hero_id, stone_id },
+        DestinyCommand::RankUp { hero_id },
     )
     .await
     {
@@ -43,7 +41,7 @@ pub async fn on_destiny_stone_use(
                 Arc::clone(&ctx),
                 player_id,
                 change,
-                CmdId::DestinyStoneUseCmd,
+                CmdId::DestinyRankUpCmd,
                 reply,
                 req.up_tag,
             )
@@ -54,13 +52,12 @@ pub async fn on_destiny_stone_use(
             tracing::warn!(
                 player_id,
                 hero_id,
-                stone_id,
-                command = "DestinyStoneUse",
+                command = "DestinyRankUp",
                 failure = ?failure,
                 error = %error,
                 "Destiny command rejected"
             );
-            send_destiny_failure(ctx, CmdId::DestinyStoneUseCmd, reply, failure, req.up_tag).await
+            send_destiny_failure(ctx, CmdId::DestinyRankUpCmd, reply, failure, req.up_tag).await
         }
     }
 }
