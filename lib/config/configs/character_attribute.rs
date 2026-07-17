@@ -4,46 +4,38 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Open {
-    #[serde(rename = "bindActivityId")]
-    pub bind_activity_id: i32,
-    #[serde(rename = "dailyOpenTime")]
-    pub daily_open_time: String,
-    pub dec: i32,
-    #[serde(rename = "elementId")]
-    pub element_id: i32,
-    #[serde(rename = "episodeId")]
-    pub episode_id: i32,
+pub struct CharacterAttribute {
+    #[serde(rename = "attrType")]
+    pub attr_type: String,
+    pub desc: String,
+    pub icon: String,
     pub id: i32,
-    #[serde(rename = "isAlwaysShowBtn")]
-    pub is_always_show_btn: i32,
-    #[serde(rename = "isOnline")]
-    pub is_online: i32,
+    #[serde(rename = "isShow")]
+    pub is_show: i32,
+    #[serde(rename = "isShowTips")]
+    pub is_show_tips: i32,
     pub name: String,
-    #[serde(rename = "playerLv")]
-    pub player_lv: i32,
-    #[serde(rename = "roomLevel")]
-    pub room_level: i32,
-    #[serde(rename = "showInEpisode")]
-    pub show_in_episode: i32,
-    #[serde(rename = "verifingEpisodeId")]
-    pub verifing_episode_id: i32,
-    #[serde(rename = "verifingHide")]
-    pub verifing_hide: i32,
+    #[serde(rename = "showType")]
+    pub show_type: i32,
+    pub showcolor: i32,
+    #[serde(rename = "sortId")]
+    pub sort_id: i32,
+    #[serde(rename = "type")]
+    pub r#type: i32,
 }
 use std::collections::HashMap;
 
-pub struct OpenTable {
-    records: Vec<Open>,
+pub struct CharacterAttributeTable {
+    records: Vec<CharacterAttribute>,
     by_id: HashMap<i32, usize>,
 }
 
-impl OpenTable {
+impl CharacterAttributeTable {
     pub fn load(path: &str) -> anyhow::Result<Self> {
         let json = std::fs::read_to_string(path)?;
         let value: serde_json::Value = serde_json::from_str(&json)?;
 
-        let records: Vec<Open> = if let Some(array) = value.as_array() {
+        let records: Vec<CharacterAttribute> = if let Some(array) = value.as_array() {
             if array.len() >= 2 && array[1].is_array() {
                 serde_json::from_value(array[1].clone())?
             } else {
@@ -66,17 +58,17 @@ impl OpenTable {
     }
 
     #[inline]
-    pub fn get(&self, id: i32) -> Option<&Open> {
+    pub fn get(&self, id: i32) -> Option<&CharacterAttribute> {
         self.by_id.get(&id).map(|&i| &self.records[i])
     }
 
     #[inline]
-    pub fn all(&self) -> &[Open] {
+    pub fn all(&self) -> &[CharacterAttribute] {
         &self.records
     }
 
     #[inline]
-    pub fn iter(&self) -> std::slice::Iter<'_, Open> {
+    pub fn iter(&self) -> std::slice::Iter<'_, CharacterAttribute> {
         self.records.iter()
     }
 

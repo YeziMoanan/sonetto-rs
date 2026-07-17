@@ -13,9 +13,12 @@ pub mod bp_lv_bonus;
 pub mod bp_task;
 pub mod chapter;
 pub mod character;
+pub mod character_attribute;
 pub mod character_cosume;
 pub mod character_destiny;
 pub mod character_destiny_facets;
+pub mod character_destiny_facets_consume;
+pub mod character_destiny_slots;
 pub mod character_level;
 pub mod character_rank;
 pub mod character_rank_replace;
@@ -23,6 +26,7 @@ pub mod character_talent;
 pub mod character_voice;
 pub mod cloth_level;
 pub mod currency;
+pub mod destiny_facets_ex_level;
 pub mod episode;
 pub mod equip;
 pub mod equip_break_cost;
@@ -44,6 +48,7 @@ pub mod skill_behavior;
 pub mod skill_buff;
 pub mod skill_effect;
 pub mod skill_ex_level;
+pub mod skill_ex_level_destiny_facets;
 pub mod skill_passive_level;
 pub mod skin;
 pub mod store_charge_goods;
@@ -70,9 +75,12 @@ pub struct GameDB {
     pub bp_task: bp_task::BpTaskTable,
     pub chapter: chapter::ChapterTable,
     pub character: character::CharacterTable,
+    pub character_attribute: character_attribute::CharacterAttributeTable,
     pub character_cosume: character_cosume::CharacterCosumeTable,
     pub character_destiny: character_destiny::CharacterDestinyTable,
     pub character_destiny_facets: character_destiny_facets::CharacterDestinyFacetsTable,
+    pub character_destiny_facets_consume: character_destiny_facets_consume::CharacterDestinyFacetsConsumeTable,
+    pub character_destiny_slots: character_destiny_slots::CharacterDestinySlotsTable,
     pub character_level: character_level::CharacterLevelTable,
     pub character_rank: character_rank::CharacterRankTable,
     pub character_rank_replace: character_rank_replace::CharacterRankReplaceTable,
@@ -80,6 +88,7 @@ pub struct GameDB {
     pub character_voice: character_voice::CharacterVoiceTable,
     pub cloth_level: cloth_level::ClothLevelTable,
     pub currency: currency::CurrencyTable,
+    pub destiny_facets_ex_level: destiny_facets_ex_level::DestinyFacetsExLevelTable,
     pub episode: episode::EpisodeTable,
     pub equip: equip::EquipTable,
     pub equip_break_cost: equip_break_cost::EquipBreakCostTable,
@@ -101,6 +110,7 @@ pub struct GameDB {
     pub skill_buff: skill_buff::SkillBuffTable,
     pub skill_effect: skill_effect::SkillEffectTable,
     pub skill_ex_level: skill_ex_level::SkillExLevelTable,
+    pub skill_ex_level_destiny_facets: skill_ex_level_destiny_facets::SkillExLevelDestinyFacetsTable,
     pub skill_passive_level: skill_passive_level::SkillPassiveLevelTable,
     pub skin: skin::SkinTable,
     pub store_charge_goods: store_charge_goods::StoreChargeGoodsTable,
@@ -153,6 +163,9 @@ impl GameDB {
         let character = character::CharacterTable::load(
             &format!("{}/character.json", data_dir)
         ).map_err(|e| anyhow::anyhow!("Failed to load character.json: {}", e))?;
+        let character_attribute = character_attribute::CharacterAttributeTable::load(
+            &format!("{}/character_attribute.json", data_dir)
+        ).map_err(|e| anyhow::anyhow!("Failed to load character_attribute.json: {}", e))?;
         let character_cosume = character_cosume::CharacterCosumeTable::load(
             &format!("{}/character_cosume.json", data_dir)
         ).map_err(|e| anyhow::anyhow!("Failed to load character_cosume.json: {}", e))?;
@@ -162,6 +175,12 @@ impl GameDB {
         let character_destiny_facets = character_destiny_facets::CharacterDestinyFacetsTable::load(
             &format!("{}/character_destiny_facets.json", data_dir)
         ).map_err(|e| anyhow::anyhow!("Failed to load character_destiny_facets.json: {}", e))?;
+        let character_destiny_facets_consume = character_destiny_facets_consume::CharacterDestinyFacetsConsumeTable::load(
+            &format!("{}/character_destiny_facets_consume.json", data_dir)
+        ).map_err(|e| anyhow::anyhow!("Failed to load character_destiny_facets_consume.json: {}", e))?;
+        let character_destiny_slots = character_destiny_slots::CharacterDestinySlotsTable::load(
+            &format!("{}/character_destiny_slots.json", data_dir)
+        ).map_err(|e| anyhow::anyhow!("Failed to load character_destiny_slots.json: {}", e))?;
         let character_level = character_level::CharacterLevelTable::load(
             &format!("{}/character_level.json", data_dir)
         ).map_err(|e| anyhow::anyhow!("Failed to load character_level.json: {}", e))?;
@@ -183,6 +202,9 @@ impl GameDB {
         let currency = currency::CurrencyTable::load(
             &format!("{}/currency.json", data_dir)
         ).map_err(|e| anyhow::anyhow!("Failed to load currency.json: {}", e))?;
+        let destiny_facets_ex_level = destiny_facets_ex_level::DestinyFacetsExLevelTable::load(
+            &format!("{}/destiny_facets_ex_level.json", data_dir)
+        ).map_err(|e| anyhow::anyhow!("Failed to load destiny_facets_ex_level.json: {}", e))?;
         let episode = episode::EpisodeTable::load(
             &format!("{}/episode.json", data_dir)
         ).map_err(|e| anyhow::anyhow!("Failed to load episode.json: {}", e))?;
@@ -246,6 +268,9 @@ impl GameDB {
         let skill_ex_level = skill_ex_level::SkillExLevelTable::load(
             &format!("{}/skill_ex_level.json", data_dir)
         ).map_err(|e| anyhow::anyhow!("Failed to load skill_ex_level.json: {}", e))?;
+        let skill_ex_level_destiny_facets = skill_ex_level_destiny_facets::SkillExLevelDestinyFacetsTable::load(
+            &format!("{}/skill_ex_level_destiny_facets.json", data_dir)
+        ).map_err(|e| anyhow::anyhow!("Failed to load skill_ex_level_destiny_facets.json: {}", e))?;
         let skill_passive_level = skill_passive_level::SkillPassiveLevelTable::load(
             &format!("{}/skill_passive_level.json", data_dir)
         ).map_err(|e| anyhow::anyhow!("Failed to load skill_passive_level.json: {}", e))?;
@@ -288,9 +313,12 @@ impl GameDB {
             bp_task,
             chapter,
             character,
+            character_attribute,
             character_cosume,
             character_destiny,
             character_destiny_facets,
+            character_destiny_facets_consume,
+            character_destiny_slots,
             character_level,
             character_rank,
             character_rank_replace,
@@ -298,6 +326,7 @@ impl GameDB {
             character_voice,
             cloth_level,
             currency,
+            destiny_facets_ex_level,
             episode,
             equip,
             equip_break_cost,
@@ -319,6 +348,7 @@ impl GameDB {
             skill_buff,
             skill_effect,
             skill_ex_level,
+            skill_ex_level_destiny_facets,
             skill_passive_level,
             skin,
             store_charge_goods,

@@ -16,3 +16,7 @@ once_cell.workspace = true
 anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+
+[dev-dependencies]
+heck.workspace = true
+walkdir.workspace = true
