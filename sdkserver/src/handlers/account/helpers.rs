@@ -29,12 +29,35 @@ pub struct UserData {
     pub last_login_at: Option<i64>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UserValidationError {
+    Missing,
+    InvalidToken,
+    Database,
+}
+
+impl UserValidationError {
+    pub const fn failure_kind(self) -> &'static str {
+        match self {
+            Self::Missing => "auth_missing",
+            Self::InvalidToken => "auth_token",
+            Self::Database => "database",
+        }
+    }
+}
+
+impl From<sqlx::Error> for UserValidationError {
+    fn from(_error: sqlx::Error) -> Self {
+        Self::Database
+    }
+}
+
 /// Fetch user from database with token validation
 pub async fn get_user_with_token_validation(
     state: &AppState,
     user_id: i64,
     token: &str,
-) -> Result<UserData> {
+) -> std::result::Result<UserData, UserValidationError> {
     let row = sqlx::query(
         "SELECT username, email, first_join, real_name_status, age, is_adult, account_tags,
                 need_activate, cipher_mark, token, refresh_token, token_expires_at,
@@ -44,12 +67,12 @@ pub async fn get_user_with_token_validation(
     .bind(user_id)
     .fetch_optional(&state.game.db)
     .await?
-    .ok_or_else(|| anyhow::anyhow!("User not found"))?;
+    .ok_or(UserValidationError::Missing)?;
 
     // Validate token
     let stored_token: String = row.try_get("token")?;
     if stored_token != token {
-        return Err(anyhow::anyhow!("Invalid token"));
+        return Err(UserValidationError::InvalidToken);
     }
 
     Ok(UserData {

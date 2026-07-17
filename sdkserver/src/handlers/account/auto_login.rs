@@ -6,26 +6,29 @@ use axum::{extract::State, response::Json};
 use common::time::ServerTime;
 use database::db::user::account::{TokenInfo, create_user, update_user_login};
 
-fn should_recover_local_auto_login(error: &anyhow::Error) -> bool {
-    let message = error.to_string();
-    message.contains("User not found") || message.contains("Invalid token")
+fn should_recover_local_auto_login(error: &UserValidationError) -> bool {
+    matches!(
+        error,
+        UserValidationError::Missing | UserValidationError::InvalidToken
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::should_recover_local_auto_login;
+    use crate::handlers::account::helpers::UserValidationError;
 
     #[test]
     fn recovers_missing_or_stale_local_auto_login() {
-        assert!(should_recover_local_auto_login(&anyhow::anyhow!(
-            "User not found"
-        )));
-        assert!(should_recover_local_auto_login(&anyhow::anyhow!(
-            "Invalid token"
-        )));
-        assert!(!should_recover_local_auto_login(&anyhow::anyhow!(
-            "database is locked"
-        )));
+        assert!(should_recover_local_auto_login(
+            &UserValidationError::Missing
+        ));
+        assert!(should_recover_local_auto_login(
+            &UserValidationError::InvalidToken
+        ));
+        assert!(!should_recover_local_auto_login(
+            &UserValidationError::Database
+        ));
     }
 }
 

@@ -40,8 +40,11 @@ pub async fn post(
     // Validate token and get user
     let user = match get_user_with_token_validation(&state, user_id, &req.token).await {
         Ok(user) => user,
-        Err(_error) => {
-            tracing::warn!("Login verify failed");
+        Err(error) => {
+            tracing::warn!(
+                failure_kind = %error.failure_kind(),
+                "Login verify failed"
+            );
             return Json(create_verify_error_response(channel_id));
         }
     };
@@ -107,7 +110,7 @@ fn create_verify_error_response(channel_id: i32) -> AccountLoginVerifyRsp {
 
 #[cfg(test)]
 mod tests {
-    use super::post;
+    use super::{AccountLoginVerifyRsp, post};
     use crate::{AppState, SdkState};
     use axum::extract::State;
     use gameserver::state::AppState as GameState;
@@ -236,8 +239,11 @@ mod tests {
         assert_eq!(response.0.data.user_info.channel_id, 200);
     }
 
-    #[tokio::test(flavor = "current_thread")]
-    async fn verify_failures_log_no_user_token_or_database_error_details() {
+    async fn verify_failure_logs(
+        state: AppState,
+        user_id: &str,
+        token: &str,
+    ) -> (AccountLoginVerifyRsp, String) {
         let writer = CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
             .with_ansi(false)
@@ -250,6 +256,15 @@ mod tests {
         let dispatch = tracing::Dispatch::new(subscriber);
         let _guard = tracing::dispatcher::set_default(&dispatch);
 
+        let request =
+            serde_json::from_value(verify_request_with_credentials(user_id, token)).unwrap();
+        let response = post(State(state), axum::Json(request)).await;
+
+        (response.0, writer.contents())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn wrong_token_logs_safe_auth_token_category() {
         let token_db = SqlitePoolOptions::new()
             .max_connections(1)
             .connect("sqlite::memory:")
@@ -270,18 +285,50 @@ mod tests {
         .execute(&token_db)
         .await
         .unwrap();
-        let token_request =
-            serde_json::from_value(verify_request_with_credentials(token_user_id, wrong_token))
-                .unwrap();
-        let token_response = post(State(state_with_db(token_db)), axum::Json(token_request)).await;
-        assert_eq!(token_response.0.code, 401);
+        let (response, logs) =
+            verify_failure_logs(state_with_db(token_db), token_user_id, wrong_token).await;
 
+        assert_eq!(response.code, 401);
+        assert!(logs.contains("failure_kind=auth_token"), "logs: {logs}");
+        for secret in [token_user_id, wrong_token, "stored-token", "Invalid token"] {
+            assert!(
+                !logs.contains(secret),
+                "verify failure log leaked {secret}: {logs}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn missing_user_logs_safe_auth_missing_category() {
+        let missing_db = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        database::run_migrations(&missing_db).await.unwrap();
+        let missing_user_id = "912345678902";
+        let missing_token = "missing-token-secret";
+        let (response, logs) =
+            verify_failure_logs(state_with_db(missing_db), missing_user_id, missing_token).await;
+
+        assert_eq!(response.code, 401);
+        assert!(logs.contains("failure_kind=auth_missing"), "logs: {logs}");
+        for secret in [missing_user_id, missing_token, "User not found"] {
+            assert!(
+                !logs.contains(secret),
+                "verify failure log leaked {secret}: {logs}"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn database_error_logs_safe_database_category() {
         let error_db = SqlitePoolOptions::new()
             .max_connections(1)
             .connect("sqlite::memory:")
             .await
             .unwrap();
-        let error_user_id = "912345678902";
+        let error_user_id = "912345678903";
         let database_secret = format!("db-error-secret-{error_user_id}");
         sqlx::query(&format!(
             "CREATE VIEW users AS SELECT * FROM \"{database_secret}\""
@@ -290,24 +337,17 @@ mod tests {
         .await
         .unwrap();
         let database_token = "database-token-secret";
-        let error_request = serde_json::from_value(verify_request_with_credentials(
-            error_user_id,
-            database_token,
-        ))
-        .unwrap();
-        let error_response = post(State(state_with_db(error_db)), axum::Json(error_request)).await;
-        assert_eq!(error_response.0.code, 401);
+        let (response, logs) =
+            verify_failure_logs(state_with_db(error_db), error_user_id, database_token).await;
 
-        let logs = writer.contents();
-        assert!(logs.contains("Login verify failed"));
+        assert_eq!(response.code, 401);
+        assert!(logs.contains("failure_kind=database"), "logs: {logs}");
         for secret in [
-            token_user_id,
-            wrong_token,
             error_user_id,
             database_secret.as_str(),
             database_token,
-            "Invalid token",
             "no such table",
+            "SELECT username",
         ] {
             assert!(
                 !logs.contains(secret),

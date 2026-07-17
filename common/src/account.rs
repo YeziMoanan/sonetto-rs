@@ -10,3 +10,29 @@ pub fn parse_user_id(account_id: &str) -> Option<i64> {
 
     account_id.parse().ok().filter(|user_id| *user_id > 0)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::parse_user_id;
+
+    #[test]
+    fn rejects_empty_user_id() {
+        assert_eq!(parse_user_id(""), None);
+    }
+
+    #[test]
+    fn rejects_zero_user_id() {
+        assert_eq!(parse_user_id("0"), None);
+        assert_eq!(parse_user_id("000"), None);
+    }
+
+    #[test]
+    fn rejects_user_id_larger_than_i64() {
+        assert_eq!(parse_user_id("9223372036854775808"), None);
+    }
+
+    #[test]
+    fn accepts_existing_leading_zero_shape() {
+        assert_eq!(parse_user_id("00042"), Some(42));
+    }
+}
