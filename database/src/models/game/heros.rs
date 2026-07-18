@@ -2,7 +2,7 @@ use anyhow::Result;
 use config::character_level::CharacterLevel;
 use serde::{Deserialize, Serialize};
 use sonettobuf;
-use sqlx::{FromRow, SqlitePool};
+use sqlx::{FromRow, SqliteConnection, SqlitePool};
 
 #[allow(async_fn_in_trait)]
 pub trait HeroModel<T> {
@@ -356,6 +356,103 @@ impl From<HeroData> for sonettobuf::HeroInfo {
             extra_str: Some(h.record.extra_str),
         }
     }
+}
+
+pub async fn get_hero_data_from_connection(
+    connection: &mut SqliteConnection,
+    user_id: i64,
+    hero_id: i32,
+) -> sqlx::Result<HeroData> {
+    let hero_record = sqlx::query_as::<_, Hero>(
+        "SELECT * FROM heroes WHERE user_id = ? AND hero_id = ?",
+    )
+    .bind(user_id)
+    .bind(hero_id)
+    .fetch_one(&mut *connection)
+    .await?;
+
+    let hero_uid = hero_record.uid;
+    let passive_skill_levels: Vec<i32> = sqlx::query_scalar(
+        "SELECT level FROM hero_passive_skill_levels WHERE hero_uid = ? ORDER BY skill_index",
+    )
+    .bind(hero_uid)
+    .fetch_all(&mut *connection)
+    .await?;
+    let voices: Vec<i32> =
+        sqlx::query_scalar("SELECT voice_id FROM hero_voices WHERE hero_uid = ?")
+            .bind(hero_uid)
+            .fetch_all(&mut *connection)
+            .await?;
+    let voices_heard: Vec<i32> =
+        sqlx::query_scalar("SELECT voice_id FROM hero_voices_heard WHERE hero_uid = ?")
+            .bind(hero_uid)
+            .fetch_all(&mut *connection)
+            .await?;
+    let skin_list = sqlx::query_as::<_, HeroSkin>(
+        "SELECT hero_uid, skin, expire_sec FROM hero_skins WHERE hero_uid = ?",
+    )
+    .bind(hero_uid)
+    .fetch_all(&mut *connection)
+    .await?;
+    let sp_attr =
+        sqlx::query_as::<_, HeroSpAttribute>("SELECT * FROM hero_sp_attrs WHERE hero_uid = ?")
+            .bind(hero_uid)
+            .fetch_optional(&mut *connection)
+            .await?;
+    let equip_attrs = sqlx::query_as::<_, HeroEquipAttribute>(
+        "SELECT * FROM hero_equip_attributes WHERE hero_uid = ?",
+    )
+    .bind(hero_uid)
+    .fetch_all(&mut *connection)
+    .await?;
+    let item_unlocks: Vec<i32> =
+        sqlx::query_scalar("SELECT item_id FROM hero_item_unlocks WHERE hero_uid = ?")
+            .bind(hero_uid)
+            .fetch_all(&mut *connection)
+            .await?;
+    let talent_cubes = sqlx::query_as::<_, HeroTalentCube>(
+        "SELECT hero_uid, cube_id, direction, pos_x, pos_y FROM hero_talent_cubes WHERE hero_uid = ?",
+    )
+    .bind(hero_uid)
+    .fetch_all(&mut *connection)
+    .await?;
+    let templates = sqlx::query_as::<_, HeroTalentTemplate>(
+        "SELECT id, hero_uid, template_id, name, style FROM hero_talent_templates WHERE hero_uid = ?",
+    )
+    .bind(hero_uid)
+    .fetch_all(&mut *connection)
+    .await?;
+    let mut talent_templates = Vec::new();
+    for template in templates {
+        let template_cubes = sqlx::query_as::<_, HeroTalentCube>(
+            "SELECT 0 as hero_uid, cube_id, direction, pos_x, pos_y
+             FROM hero_talent_template_cubes WHERE template_row_id = ?",
+        )
+        .bind(template.id)
+        .fetch_all(&mut *connection)
+        .await?;
+        talent_templates.push((template, template_cubes));
+    }
+    let destiny_stone_unlocks: Vec<i32> = sqlx::query_scalar(
+        "SELECT stone_id FROM hero_destiny_stone_unlocks WHERE hero_uid = ?",
+    )
+    .bind(hero_uid)
+    .fetch_all(&mut *connection)
+    .await?;
+
+    Ok(HeroData {
+        record: hero_record,
+        passive_skill_levels,
+        voices,
+        voices_heard,
+        skin_list,
+        sp_attr,
+        equip_attrs,
+        item_unlocks,
+        talent_cubes,
+        talent_templates,
+        destiny_stone_unlocks,
+    })
 }
 
 impl UserHeroModel {

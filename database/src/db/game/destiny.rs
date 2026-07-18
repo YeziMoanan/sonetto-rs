@@ -14,6 +14,7 @@ use crate::{
             OwnedDestinyHero, ProgressionError, plan_transition,
         },
         items::Item,
+        heros::get_hero_data_from_connection,
     },
 };
 
@@ -24,6 +25,7 @@ const CONNECTION_ACQUIRE_TIMEOUT_MS: u64 = 50;
 #[derive(Debug, Clone)]
 pub struct CommittedDestinyChange {
     pub hero_id: i32,
+    pub hero: sonettobuf::HeroInfo,
     pub state: DestinyState,
     pub unlocked_stones: Vec<i32>,
     pub items: Vec<Item>,
@@ -196,8 +198,12 @@ async fn execute_attempt(
     let plan = plan_transition(catalog, &owned, command)?;
 
     if plan.kind == MutationKind::NoChange {
+        let hero = get_hero_data_from_connection(connection, user_id, hero_id)
+            .await?
+            .into();
         return Ok(CommittedDestinyChange {
             hero_id,
+            hero,
             state: owned.state,
             unlocked_stones: owned.unlocked_stones,
             items: Vec::new(),
@@ -299,9 +305,13 @@ async fn execute_attempt(
     let state = read_destiny_state(connection, hero_uid).await?;
     let unlocked_stones = read_unlocked_stones(connection, hero_uid).await?;
     let (items, currencies) = read_resource_snapshots(connection, user_id, &plan.costs).await?;
+    let hero = get_hero_data_from_connection(connection, user_id, hero_id)
+        .await?
+        .into();
 
     Ok(CommittedDestinyChange {
         hero_id,
+        hero,
         state,
         unlocked_stones,
         items,

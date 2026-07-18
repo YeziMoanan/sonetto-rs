@@ -1,10 +1,12 @@
 use database::models::game::destiny::{
     DestinyCommand, DestinyState, MutationKind, OwnedDestinyHero, plan_transition,
 };
+use database::db::game::destiny::execute_destiny_command;
 use gameserver::network::{
     handler::dispatch_command,
     packet::{ClientPacket, ServerPacket},
 };
+use gameserver::handlers::destiny_stone::send_destiny_success;
 use gameserver::state::{AppState, ConnectionContext};
 use prost::Message;
 use sonettobuf::{
@@ -239,6 +241,69 @@ async fn destiny_rank_up_packet_pushes_committed_state_and_resources() {
     assert_eq!(reply_packet.result_code, 0);
     assert_eq!(reply_packet.up_tag, 11);
     assert_eq!(reply.hero_id, Some(HERO_ID));
+    close_and_cleanup(temp_db, ctx, client).await;
+}
+
+#[tokio::test]
+async fn destiny_success_uses_committed_full_snapshot_after_pool_read_failure() {
+    let (temp_db, ctx, mut client) = test_connection_with_destiny_hero(0, 0, 0).await;
+    let pool = ctx.lock().await.state.db.clone();
+    let catalog = config::destiny::DestinyConfigIndex::try_from_game_db(config::configs::get())
+        .expect("Destiny config index should build");
+    let change = execute_destiny_command(
+        &pool,
+        USER_ID,
+        &catalog,
+        DestinyCommand::RankUp { hero_id: HERO_ID },
+    )
+    .await
+    .expect("Destiny command should commit before delivery");
+    let item_push_expected = !change.items.is_empty();
+    let currency_push_expected = !change.currencies.is_empty();
+    pool.close().await;
+
+    send_destiny_success(
+        Arc::clone(&ctx),
+        USER_ID,
+        change,
+        CmdId::DestinyRankUpCmd,
+        DestinyRankUpReply {
+            hero_id: Some(HERO_ID),
+        },
+        101,
+    )
+    .await
+    .expect("committed full snapshot should not require a post-commit pool read");
+    ctx.lock().await.flush_send_queue().await.unwrap();
+
+    if item_push_expected {
+        assert_eq!(read_server_packet(&mut client).await.cmd_id, CmdId::ItemChangePushCmd as i16);
+    }
+    if currency_push_expected {
+        assert_eq!(
+            read_server_packet(&mut client).await.cmd_id,
+            CmdId::CurrencyChangePushCmd as i16
+        );
+    }
+    let hero_packet = read_server_packet(&mut client).await;
+    let hero = hero_packet
+        .decode_message::<HeroUpdatePush>()
+        .unwrap()
+        .hero_updates
+        .into_iter()
+        .next()
+        .expect("full HeroInfo push should contain the committed hero");
+    assert_eq!(hero_packet.cmd_id, CmdId::HeroHeroUpdatePushCmd as i16);
+    assert_eq!(hero.uid, HERO_UID);
+    assert_eq!(hero.hero_id, HERO_ID);
+    assert_eq!(hero.level, Some(180));
+    assert_eq!(hero.base_attr.as_ref().and_then(|attr| attr.hp), Some(1));
+    assert_eq!(hero.destiny_rank, Some(1));
+
+    let reply_packet = read_server_packet(&mut client).await;
+    assert_eq!(reply_packet.cmd_id, CmdId::DestinyRankUpCmd as i16);
+    assert_eq!(reply_packet.result_code, 0);
+    assert_eq!(reply_packet.up_tag, 101);
     close_and_cleanup(temp_db, ctx, client).await;
 }
 

@@ -108,40 +108,12 @@ impl TestDatabase {
             .await
             .unwrap();
 
+        database::run_migrations(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE heroes (
-                uid INTEGER PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                hero_id INTEGER NOT NULL,
-                destiny_rank INTEGER NOT NULL DEFAULT 0,
-                destiny_level INTEGER NOT NULL DEFAULT 0,
-                destiny_stone INTEGER NOT NULL DEFAULT 0
-            );
-            CREATE TABLE hero_destiny_stone_unlocks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                hero_uid INTEGER NOT NULL,
-                stone_id INTEGER NOT NULL,
-                FOREIGN KEY (hero_uid) REFERENCES heroes(uid) ON DELETE CASCADE,
-                UNIQUE(hero_uid, stone_id)
-            );
-            CREATE TABLE items (
-                user_id INTEGER NOT NULL,
-                item_id INTEGER NOT NULL,
-                quantity INTEGER NOT NULL DEFAULT 0,
-                last_use_time INTEGER,
-                last_update_time INTEGER,
-                total_gain_count INTEGER DEFAULT 0,
-                PRIMARY KEY (user_id, item_id)
-            );
-            CREATE TABLE currencies (
-                user_id INTEGER NOT NULL,
-                currency_id INTEGER NOT NULL,
-                quantity INTEGER NOT NULL DEFAULT 0,
-                last_recover_time INTEGER,
-                expired_time INTEGER,
-                PRIMARY KEY (user_id, currency_id)
-            )",
+            "INSERT INTO users (id, username, created_at, updated_at) VALUES (?, ?, 0, 0)",
         )
+        .bind(USER_ID)
+        .bind(format!("destiny-test-{sequence}"))
         .execute(&pool)
         .await
         .unwrap();
@@ -191,8 +163,11 @@ impl TestDatabase {
     async fn insert_hero(&self, hero_id: i32, state: DestinyState) {
         sqlx::query(
             "INSERT INTO heroes
-             (uid, user_id, hero_id, destiny_rank, destiny_level, destiny_stone)
-             VALUES (?, ?, ?, ?, ?, ?)",
+             (uid, user_id, hero_id, create_time, level, exp, rank, breakthrough,
+              skin, faith, active_skill_level, ex_skill_level, destiny_rank,
+              destiny_level, destiny_stone, base_hp, base_attack, base_defense,
+              base_mdefense, base_technic)
+             VALUES (?, ?, ?, 0, 1, 0, 1, 0, 0, 0, 1, 1, ?, ?, ?, 1, 1, 1, 1, 1)",
         )
         .bind(HERO_UID)
         .bind(USER_ID)
@@ -1252,6 +1227,47 @@ async fn hero_update_error_rolls_back_resource_deductions() {
     .execute(&db.pool)
     .await
     .unwrap();
+
+    let result = execute_destiny_command(
+        &db.pool,
+        USER_ID,
+        mixed_cost_catalog(),
+        DestinyCommand::RankUp { hero_id: 3073 },
+    )
+    .await;
+
+    assert!(matches!(result, Err(ProgressionError::Database(_))));
+    assert_eq!(db.item_quantity(620101).await, 100);
+    assert_eq!(db.currency_quantity(5).await, 20);
+    assert_eq!(
+        db.state().await,
+        DestinyState {
+            rank: 0,
+            level: 0,
+            stone: 0
+        }
+    );
+    db.close().await;
+}
+
+#[tokio::test]
+async fn hero_snapshot_schema_error_rolls_back_every_write() {
+    let db = TestDatabase::new().await;
+    db.insert_hero(
+        3073,
+        DestinyState {
+            rank: 0,
+            level: 0,
+            stone: 0,
+        },
+    )
+    .await;
+    db.insert_item(620101, 100).await;
+    db.insert_currency(5, 20).await;
+    sqlx::query("ALTER TABLE heroes DROP COLUMN create_time")
+        .execute(&db.pool)
+        .await
+        .unwrap();
 
     let result = execute_destiny_command(
         &db.pool,

@@ -4,7 +4,6 @@ use crate::state::ConnectionContext;
 use config::destiny::DestinyConfigIndex;
 use database::db::game::destiny::CommittedDestinyChange;
 use database::models::game::destiny::ProgressionError;
-use database::models::game::heros::{HeroModel, UserHeroModel};
 use prost::Message;
 use sonettobuf::{CmdId, CurrencyChangePush, HeroUpdatePush, ItemChangePush};
 use std::sync::Arc;
@@ -28,6 +27,7 @@ mod tests {
         };
         let change = CommittedDestinyChange {
             hero_id: 3098,
+            hero: sonettobuf::HeroInfo::default(),
             state: DestinyState {
                 rank: 2,
                 level: 1,
@@ -185,7 +185,7 @@ fn apply_committed_destiny_snapshot(
 
 pub async fn send_destiny_success<R>(
     ctx: Arc<Mutex<ConnectionContext>>,
-    player_id: i64,
+    _player_id: i64,
     change: CommittedDestinyChange,
     reply_cmd: CmdId,
     reply: R,
@@ -194,13 +194,7 @@ pub async fn send_destiny_success<R>(
 where
     R: Message,
 {
-    let updated_hero = {
-        let conn = ctx.lock().await;
-        UserHeroModel::new(player_id, conn.state.db.clone())
-            .get(change.hero_id)
-            .await?
-    };
-    let updated_hero = apply_committed_destiny_snapshot(updated_hero.into(), &change);
+    let updated_hero = apply_committed_destiny_snapshot(change.hero.clone(), &change);
 
     let mut conn = ctx.lock().await;
     if !change.items.is_empty() {
