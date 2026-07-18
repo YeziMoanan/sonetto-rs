@@ -1,7 +1,7 @@
 use crate::error::AppError;
 use crate::network::packet::ClientPacket;
 use crate::state::{
-    ActiveBattle, BattleContext, ConnectionContext, create_battle, default_max_ap,
+    max_ap_for_fight_group, ActiveBattle, BattleContext, ConnectionContext, create_battle,
     generate_initial_deck,
 };
 use config::configs;
@@ -58,7 +58,10 @@ pub async fn on_start_tower_battle(
         )
     };
 
-    let hero_count = fight_group.hero_list.iter().filter(|&&u| u != 0).count();
+    let max_ap = max_ap_for_fight_group(episode_id, &fight_group).map_err(|error| {
+        tracing::warn!(error = %error, "invalid tower trial hero request");
+        AppError::InvalidRequest
+    })?;
 
     let game_data = configs::get();
     let battle_id = game_data
@@ -67,8 +70,6 @@ pub async fn on_start_tower_battle(
         .find(|e| e.id == episode_id)
         .ok_or(AppError::InvalidRequest)?
         .battle_id;
-
-    let max_ap = default_max_ap(episode_id, hero_count);
 
     let battle_ctx = BattleContext {
         player_id,

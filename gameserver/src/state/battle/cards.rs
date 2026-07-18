@@ -1,3 +1,6 @@
+use super::trial::{
+    NormalizedTrial, active_hero_count, card_source_hero_count, normalize_trial_requests,
+};
 use crate::error::AppError;
 use config::configs;
 use database::models::game::heros::{HeroModel, UserHeroModel};
@@ -6,7 +9,6 @@ use rand::{Rng, SeedableRng, rngs::StdRng, seq::SliceRandom};
 use sonettobuf::{CardInfo, CardInfoPush, Fight, FightGroup};
 use sqlx::SqlitePool;
 use std::sync::atomic::{AtomicI64, Ordering};
-use std::collections::HashSet;
 
 static CARD_UID: AtomicI64 = AtomicI64::new(1);
 
@@ -17,40 +19,25 @@ pub async fn generate_card_deck(
     fight_group: &FightGroup,
     max_cards: usize,
 ) -> Result<Vec<CardInfo>, AppError> {
-    let mut trial_ids = HashSet::new();
-    for trial in &fight_group.trial_hero_list {
-        let Some(trial_id) = trial.trial_id else {
-            return Err(AppError::InvalidRequest);
-        };
-        if !trial_ids.insert(trial_id) {
-            return Err(AppError::InvalidRequest);
-        }
-    }
+    let trials = normalize_trial_requests(fight_group).map_err(|error| {
+        tracing::warn!(error = %error, "invalid trial hero request");
+        AppError::InvalidRequest
+    })?;
     let active_heroes: Vec<i64> = fight_group
         .hero_list
         .iter()
         .copied()
-        .filter(|&u| u > 0 || (u < 0 && fight_group.trial_hero_list.is_empty()))
+        .filter(|uid| *uid > 0)
         .chain(
-            fight_group
-                .trial_hero_list
+            trials
                 .iter()
-                .enumerate()
-                .filter_map(|(index, trial)| {
-                    trial
-                        .trial_id
-                        .is_some()
-                        .then_some(-((index + 1) as i64))
-                }),
+                .copied()
+                .filter(|trial| trial.has_initial_card())
+                .map(|trial| trial.uid),
         )
         .collect();
 
-    let trial_ids = fight_group
-        .trial_hero_list
-        .iter()
-        .filter_map(|trial| trial.trial_id)
-        .collect::<Vec<_>>();
-    let candidates = build_candidate_pool(pool, user_id, &active_heroes, &trial_ids).await?;
+    let candidates = build_candidate_pool(pool, user_id, &active_heroes, &trials).await?;
     let deck = draw_cards_with_merge(candidates, max_cards);
 
     Ok(deck)
@@ -63,16 +50,11 @@ pub async fn generate_initial_deck(
     fight_group: &FightGroup,
     act_point: i32,
 ) -> Result<CardInfoPush, AppError> {
-    let hero_count = fight_group.hero_list.iter().filter(|&&u| u > 0).count()
-        + if fight_group.trial_hero_list.is_empty() {
-            fight_group.hero_list.iter().filter(|&&u| u < 0).count()
-        } else {
-            fight_group
-                .trial_hero_list
-                .iter()
-                .filter(|trial| trial.trial_id.is_some())
-                .count()
-        };
+    let trials = normalize_trial_requests(fight_group).map_err(|error| {
+        tracing::warn!(error = %error, "invalid trial hero request");
+        AppError::InvalidRequest
+    })?;
+    let hero_count = card_source_hero_count(fight_group, &trials);
     let max_cards = compute_max_cards(hero_count);
 
     let deck = generate_card_deck(pool, user_id, fight_group, max_cards).await?;
@@ -188,7 +170,7 @@ async fn build_candidate_pool(
     pool: &SqlitePool,
     user_id: i64,
     hero_uids: &[i64],
-    trial_ids: &[i32],
+    trials: &[NormalizedTrial],
 ) -> Result<Vec<CardInfo>, AppError> {
     let mut pool_cards = Vec::new();
     let game_data = configs::get();
@@ -202,32 +184,27 @@ async fn build_candidate_pool(
 
         let hero_id = if hero_uid < 0 {
             // === TRIAL HERO PATH - NO DATABASE ACCESS ===
-            let trial_index = hero_uid
-                .checked_neg()
-                .and_then(|uid| usize::try_from(uid - 1).ok())
-                .ok_or(AppError::InvalidRequest)?;
-            let trial_id = trial_ids
-                .get(trial_index)
-                .copied()
-                .or_else(|| game_data.hero_trial.iter().nth(trial_index).map(|trial| trial.id))
+            let trial = trials
+                .iter()
+                .find(|trial| trial.uid == hero_uid && trial.has_initial_card())
                 .ok_or_else(|| {
-                    tracing::error!("Unknown trial hero ordinal UID: {}", hero_uid);
+                    tracing::error!("Unknown normalized trial hero UID: {}", hero_uid);
                     AppError::InvalidRequest
                 })?;
 
             let trial_data = game_data
                 .hero_trial
                 .iter()
-                .find(|t| t.id == trial_id)
+                .find(|data| data.id == trial.trial_id)
                 .ok_or_else(|| {
-                    tracing::error!("Trial data not found for ID {}", trial_id);
+                    tracing::error!("Trial data not found for ID {}", trial.trial_id);
                     AppError::InvalidRequest
                 })?;
 
             tracing::info!(
                 "Trial hero: UID {} -> trial_id {} -> hero_id {}",
                 hero_uid,
-                trial_id,
+                trial.trial_id,
                 trial_data.hero_id
             );
 
@@ -352,7 +329,7 @@ fn get_hero_skills(hero_id: i32) -> Vec<i32> {
     skills
 }
 
-pub fn default_max_ap(episode_id: i32, hero_count: usize) -> i32 {
+fn default_max_ap(episode_id: i32, hero_count: usize) -> i32 {
     let game_data = configs::get();
 
     let battle_id = game_data
@@ -376,4 +353,12 @@ pub fn default_max_ap(episode_id: i32, hero_count: usize) -> i32 {
 
     // Use the smaller of config vs hero-based cap
     base_ap.min(hero_ap)
+}
+
+pub fn max_ap_for_fight_group(episode_id: i32, fight_group: &FightGroup) -> anyhow::Result<i32> {
+    let trials = normalize_trial_requests(fight_group)?;
+    Ok(default_max_ap(
+        episode_id,
+        active_hero_count(fight_group, &trials),
+    ))
 }

@@ -21,6 +21,7 @@ use sonettobuf::{ActEffect, CardInfo, Fight, FightRound, FightStep};
 #[derive(Default, Debug, Clone)]
 pub struct FightDataMgr {
     fight: Arc<Fight>,
+    max_ap: i32,
     mechanics: Mechanics,
     pub entity_mgr: FightEntityDataMgr,
     blood_pool_mgr: FightBloodPoolDataMgr,
@@ -35,9 +36,14 @@ impl FightDataMgr {
         Self::new_with_destiny_modifiers(fight, DestinyModifierMap::new())
     }
 
-    pub fn new_with_destiny_modifiers(
+    pub fn new_with_destiny_modifiers(fight: Fight, destiny_modifiers: DestinyModifierMap) -> Self {
+        Self::new_with_destiny_modifiers_and_max_ap(fight, destiny_modifiers, 4)
+    }
+
+    pub fn new_with_destiny_modifiers_and_max_ap(
         fight: Fight,
         destiny_modifiers: DestinyModifierMap,
+        max_ap: i32,
     ) -> Self {
         let fight_arc = Arc::new(fight);
         let destiny_modifiers = Arc::new(destiny_modifiers);
@@ -49,13 +55,15 @@ impl FightDataMgr {
 
         Self {
             fight: fight_arc.clone(),
+            max_ap,
             mechanics,
             entity_mgr: FightEntityDataMgr::new(fight_arc.clone()),
             blood_pool_mgr,
             card_mgr: FightCardMgr::new(fight_arc.clone()),
-            round_mgr: FightRoundMgr::new_with_destiny_modifiers(
+            round_mgr: FightRoundMgr::new_with_destiny_modifiers_and_max_ap(
                 fight_arc.clone(),
                 destiny_modifiers.clone(),
+                max_ap,
             ),
             calculate_mgr: FightCalculateDataMgr::new_with_destiny_modifiers(
                 fight_arc,
@@ -216,7 +224,7 @@ impl FightDataMgr {
     
                 FightRound {
                     fight_step: steps,
-                    act_point: Some(3),
+                    act_point: Some(self.max_ap),
                     is_finish: Some(false),
                     move_num: Some(0),
                     ex_point_info: self.calculate_mgr.build_ex_point_info(fight),

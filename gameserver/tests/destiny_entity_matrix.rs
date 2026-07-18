@@ -1,26 +1,29 @@
-use std::sync::Once;
+use std::{collections::HashSet, sync::Once};
 
 use database::models::game::heros::{Hero, HeroData};
 use gameserver::state::battle::destiny::{
-    resolve_destiny_attributes, DestinyState, HeroBaseAttributes, HeroBuildContext, HeroSource,
-    ResolvedHeroKit,
+    DestinyState, HeroBaseAttributes, HeroBuildContext, HeroSource, ResolvedHeroKit,
+    resolve_destiny_attributes,
 };
-use gameserver::state::battle::generate_initial_deck;
 use gameserver::state::battle::entity_builder::{
     build_hero_entity, resolve_entity_destiny_attributes, resolve_entity_kit,
 };
 use gameserver::state::battle::fight_builder::{
     build_attacker_team, build_attacker_team_with_destiny_modifiers,
 };
+use gameserver::state::battle::generate_initial_deck;
+use gameserver::state::battle::trial::normalize_trial_requests;
 use sonettobuf::{FightGroup, TrialHero};
 use sqlx::SqlitePool;
+use sqlx::sqlite::SqlitePoolOptions;
 
 static CONFIG_INIT: Once = Once::new();
 
 fn init_config() {
     CONFIG_INIT.call_once(|| {
-        let data_dir = std::env::var("JSON_DATA_DIR")
-            .expect("JSON_DATA_DIR must point at the international 3.6 runtime excel2json directory");
+        let data_dir = std::env::var("JSON_DATA_DIR").expect(
+            "JSON_DATA_DIR must point at the international 3.6 runtime excel2json directory",
+        );
         config::configs::init(&data_dir).expect("failed to initialize config data");
     });
 }
@@ -118,6 +121,39 @@ fn owned_hero(hero_id: i32, ex_skill_level: i32, facet_id: i32, facet_rank: i32)
     }
 }
 
+async fn owned_hero_pool() -> SqlitePool {
+    init_config();
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+    database::run_migrations(&pool).await.unwrap();
+    sqlx::query("INSERT INTO users (id, username, created_at, updated_at) VALUES (7, 'trial-position-test', 0, 0)")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let character = config::configs::get()
+        .character
+        .get(3025)
+        .expect("owned hero fixture should exist");
+    sqlx::query(
+        "INSERT INTO heroes
+         (uid, user_id, hero_id, create_time, level, exp, rank, breakthrough,
+          skin, faith, active_skill_level, ex_skill_level, destiny_rank,
+          destiny_level, destiny_stone, base_hp, base_attack, base_defense,
+          base_mdefense, base_technic)
+         VALUES (42, 7, 3025, 0, 180, 0, ?, 0, ?, 0, 1, 1, 0, 0, 0,
+                 10000, 1000, 500, 500, 100)",
+    )
+    .bind(character.rank)
+    .bind(character.skin_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    pool
+}
+
 #[tokio::test]
 async fn live_owned_main_and_substitute_use_the_same_resolved_kit() {
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
@@ -204,7 +240,10 @@ async fn destiny_percentages_use_pre_equipment_base_attributes() {
     .unwrap();
     let attrs = entity.attr.as_ref().unwrap();
     assert_eq!(attrs.hp, Some(base.hp + strengthen.hp + resolved.hp));
-    assert_eq!(attrs.attack, Some(base.attack + strengthen.atk + resolved.attack));
+    assert_eq!(
+        attrs.attack,
+        Some(base.attack + strengthen.atk + resolved.attack)
+    );
 }
 
 #[test]
@@ -213,10 +252,15 @@ fn hero_3088_keeps_compatibility_passives_once() {
 
     assert_eq!(
         resolved.passives,
-        vec![30880141, 30880151, 308801611, 308801911, 308801921, 308802111]
+        vec![
+            30880141, 30880151, 308801611, 308801911, 308801921, 308802111
+        ]
     );
     for bonus in [308801911, 308801921, 308802111] {
-        assert_eq!(resolved.passives.iter().filter(|id| **id == bonus).count(), 1);
+        assert_eq!(
+            resolved.passives.iter().filter(|id| **id == bonus).count(),
+            1
+        );
     }
 }
 
@@ -255,8 +299,12 @@ async fn live_builder_foreign_facet_does_not_add_destiny_attributes() {
     let baseline = owned_hero(3088, 5, 0, 0);
 
     let valid_entity = build_hero_entity(&pool, &valid, 1, 1, false).await.unwrap();
-    let foreign_entity = build_hero_entity(&pool, &foreign, 1, 1, false).await.unwrap();
-    let baseline_entity = build_hero_entity(&pool, &baseline, 1, 1, false).await.unwrap();
+    let foreign_entity = build_hero_entity(&pool, &foreign, 1, 1, false)
+        .await
+        .unwrap();
+    let baseline_entity = build_hero_entity(&pool, &baseline, 1, 1, false)
+        .await
+        .unwrap();
 
     let valid_attr = valid_entity.attr.as_ref().expect("valid attrs");
     let foreign_attr = foreign_entity.attr.as_ref().expect("foreign attrs");
@@ -431,15 +479,22 @@ async fn trial_list_contributes_cards_with_the_same_ordinal_uid() {
 
     let cards = generate_initial_deck(&pool, 7, &group, 0).await.unwrap();
     assert!(!cards.card_group.is_empty());
-    assert!(cards.card_group.iter().all(|card| card.hero_id == Some(3041)));
-    assert!(cards
-        .card_group
-        .iter()
-        .all(|card| card.temp_card == Some(true)));
+    assert!(
+        cards
+            .card_group
+            .iter()
+            .all(|card| card.hero_id == Some(3041))
+    );
+    assert!(
+        cards
+            .card_group
+            .iter()
+            .all(|card| card.temp_card == Some(true))
+    );
 }
 
 #[tokio::test]
-async fn legacy_negative_trial_uid_remains_reachable_without_explicit_list() {
+async fn legacy_negative_trial_id_remains_reachable_without_explicit_list() {
     init_config();
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
     let trial_id = config::configs::get()
@@ -449,7 +504,7 @@ async fn legacy_negative_trial_uid_remains_reachable_without_explicit_list() {
         .expect("legacy trial fixture should exist")
         .id;
     let group = FightGroup {
-        hero_list: vec![-1],
+        hero_list: vec![-i64::from(trial_id)],
         ..Default::default()
     };
 
@@ -460,7 +515,164 @@ async fn legacy_negative_trial_uid_remains_reachable_without_explicit_list() {
 
     let cards = generate_initial_deck(&pool, 7, &group, 0).await.unwrap();
     assert!(!cards.card_group.is_empty());
-    assert!(cards.card_group.iter().all(|card| card.temp_card == Some(true)));
+    assert!(
+        cards
+            .card_group
+            .iter()
+            .all(|card| card.temp_card == Some(true))
+    );
+}
+
+#[tokio::test]
+async fn unsupported_battle_aid_placeholder_does_not_fail_trial_consumers() {
+    init_config();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let group = FightGroup {
+        hero_list: vec![-1],
+        ..Default::default()
+    };
+
+    assert!(normalize_trial_requests(&group).unwrap().is_empty());
+    let team = build_attacker_team(&pool, 7, &group).await.unwrap();
+    assert!(team.entitys.is_empty());
+    let cards = generate_initial_deck(&pool, 7, &group, 0).await.unwrap();
+    assert!(cards.card_group.is_empty());
+}
+
+#[tokio::test]
+async fn battle_aid_does_not_inflate_owned_card_source_count() {
+    init_config();
+    let pool = owned_hero_pool().await;
+    let character = config::configs::get()
+        .character
+        .get(3025)
+        .expect("owned hero fixture should exist");
+    sqlx::query(
+        "INSERT INTO heroes
+         (uid, user_id, hero_id, create_time, level, exp, rank, breakthrough,
+          skin, faith, active_skill_level, ex_skill_level, destiny_rank,
+          destiny_level, destiny_stone, base_hp, base_attack, base_defense,
+          base_mdefense, base_technic)
+         VALUES (43, 7, 3025, 0, 180, 0, ?, 0, ?, 0, 1, 1, 0, 0, 0,
+                 10000, 1000, 500, 500, 100)",
+    )
+    .bind(character.rank)
+    .bind(character.skin_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let group = FightGroup {
+        hero_list: vec![42, 43, -1],
+        ..Default::default()
+    };
+
+    let trials = normalize_trial_requests(&group).unwrap();
+    assert_eq!(
+        gameserver::state::battle::trial::active_hero_count(&group, &trials),
+        3
+    );
+    let cards = generate_initial_deck(&pool, 7, &group, 0).await.unwrap();
+    assert_eq!(cards.card_group.len(), 6);
+}
+
+#[tokio::test]
+async fn explicit_trial_and_battle_aid_placeholder_can_coexist() {
+    init_config();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let group = FightGroup {
+        hero_list: vec![-1],
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(2_241_001),
+            pos: Some(2),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let team = build_attacker_team(&pool, 7, &group).await.unwrap();
+    assert_eq!(team.entitys.len(), 1);
+    assert_eq!(team.entitys[0].trial_id, Some(2_241_001));
+    assert_eq!(team.entitys[0].uid, Some(-2));
+    assert_ne!(team.entitys[0].uid, Some(-1));
+    assert_eq!(team.entitys[0].position, Some(2));
+    let cards = generate_initial_deck(&pool, 7, &group, 0).await.unwrap();
+    assert!(!cards.card_group.is_empty());
+    assert!(
+        cards
+            .card_group
+            .iter()
+            .all(|card| card.hero_id == Some(3041))
+    );
+}
+
+#[tokio::test]
+async fn explicit_main_aid_placeholder_consumes_its_wire_slot() {
+    init_config();
+    let pool = owned_hero_pool().await;
+    let group = FightGroup {
+        hero_list: vec![-1, 42],
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(2_241_001),
+            pos: Some(3),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let team = build_attacker_team(&pool, 7, &group).await.unwrap();
+    assert_eq!(team.entitys.len(), 2);
+    let owned = team
+        .entitys
+        .iter()
+        .find(|entity| entity.uid == Some(42))
+        .unwrap();
+    let trial = team
+        .entitys
+        .iter()
+        .find(|entity| entity.trial_id == Some(2_241_001))
+        .unwrap();
+    assert_eq!(owned.position, Some(2));
+    assert_eq!(trial.position, Some(3));
+}
+
+#[tokio::test]
+async fn explicit_substitute_aid_placeholder_consumes_its_wire_slot() {
+    init_config();
+    let pool = owned_hero_pool().await;
+    let group = FightGroup {
+        sub_hero_list: vec![-1, 42],
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(2_241_001),
+            pos: Some(-2),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let team = build_attacker_team(&pool, 7, &group).await.unwrap();
+    assert_eq!(team.sub_entitys.len(), 2);
+    assert_eq!(team.sub_entitys[0].trial_id, Some(2_241_001));
+    assert_eq!(team.sub_entitys[1].uid, Some(-3));
+}
+
+#[tokio::test]
+async fn battle_aid_prefix_is_reserved_for_owned_substitute_uid() {
+    init_config();
+    let pool = owned_hero_pool().await;
+    let group = FightGroup {
+        hero_list: vec![-4],
+        sub_hero_list: vec![42],
+        ..Default::default()
+    };
+
+    let (team, modifiers) = build_attacker_team_with_destiny_modifiers(&pool, 7, &group)
+        .await
+        .unwrap();
+    assert!(team.entitys.is_empty());
+    assert_eq!(team.sub_entitys.len(), 1);
+    assert_eq!(team.sub_entitys[0].uid, Some(-5));
+    assert!(modifiers.contains_key(&-5));
+    assert!(!modifiers.contains_key(&-4));
 }
 
 #[tokio::test]
@@ -474,4 +686,401 @@ async fn explicit_trial_list_rejects_missing_trial_id() {
 
     assert!(build_attacker_team(&pool, 7, &group).await.is_err());
     assert!(generate_initial_deck(&pool, 7, &group, 0).await.is_err());
+}
+
+#[tokio::test]
+async fn legacy_trial_id_in_main_hero_list_builds_by_real_id() {
+    init_config();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let group = FightGroup {
+        hero_list: vec![-2_241_001],
+        ..Default::default()
+    };
+
+    let team = build_attacker_team(&pool, 7, &group).await.unwrap();
+    assert_eq!(team.entitys.len(), 1);
+    assert!(team.sub_entitys.is_empty());
+    assert_eq!(team.entitys[0].trial_id, Some(2_241_001));
+    assert_eq!(team.entitys[0].uid, Some(-1));
+}
+
+#[tokio::test]
+async fn legacy_trial_id_in_sub_hero_list_builds_substitute_without_main_card() {
+    init_config();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let group = FightGroup {
+        sub_hero_list: vec![-2_241_001],
+        ..Default::default()
+    };
+
+    let team = build_attacker_team(&pool, 7, &group).await.unwrap();
+    assert!(team.entitys.is_empty());
+    assert_eq!(team.sub_entitys.len(), 1);
+    assert_eq!(team.sub_entitys[0].trial_id, Some(2_241_001));
+    assert_eq!(team.sub_entitys[0].uid, Some(-1));
+
+    let cards = generate_initial_deck(&pool, 7, &group, 0).await.unwrap();
+    assert!(cards.card_group.is_empty());
+}
+
+#[tokio::test]
+async fn explicit_negative_trial_position_builds_substitute_without_main_card() {
+    init_config();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let group = FightGroup {
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(2_241_001),
+            pos: Some(-1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let team = build_attacker_team(&pool, 7, &group).await.unwrap();
+    assert!(team.entitys.is_empty());
+    assert_eq!(team.sub_entitys.len(), 1);
+    assert_eq!(team.sub_entitys[0].trial_id, Some(2_241_001));
+    assert_eq!(team.sub_entitys[0].uid, Some(-1));
+
+    let cards = generate_initial_deck(&pool, 7, &group, 0).await.unwrap();
+    assert!(cards.card_group.is_empty());
+}
+
+#[tokio::test]
+async fn explicit_trial_without_position_is_rejected() {
+    init_config();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let trial_id = config::configs::get()
+        .hero_trial
+        .all()
+        .first()
+        .expect("trial fixture should exist")
+        .id;
+    let group = FightGroup {
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(trial_id),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    assert!(build_attacker_team(&pool, 7, &group).await.is_err());
+    assert!(generate_initial_deck(&pool, 7, &group, 0).await.is_err());
+}
+
+#[tokio::test]
+async fn explicit_trial_slot_one_places_compacted_owned_hero_in_slot_two() {
+    let pool = owned_hero_pool().await;
+    let group = FightGroup {
+        hero_list: vec![42],
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(2_241_001),
+            pos: Some(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let team = build_attacker_team(&pool, 7, &group).await.unwrap();
+    let owned = team
+        .entitys
+        .iter()
+        .find(|entity| entity.uid == Some(42))
+        .unwrap();
+    let trial = team
+        .entitys
+        .iter()
+        .find(|entity| entity.trial_id == Some(2_241_001))
+        .unwrap();
+    assert_eq!(trial.position, Some(1));
+    assert_eq!(owned.position, Some(2));
+    assert_eq!(team.entitys[0].trial_id, Some(2_241_001));
+}
+
+#[tokio::test]
+async fn explicit_trial_slot_two_keeps_compacted_owned_hero_in_slot_one() {
+    let pool = owned_hero_pool().await;
+    let group = FightGroup {
+        hero_list: vec![42],
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(2_241_001),
+            pos: Some(2),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let team = build_attacker_team(&pool, 7, &group).await.unwrap();
+    let owned = team
+        .entitys
+        .iter()
+        .find(|entity| entity.uid == Some(42))
+        .unwrap();
+    let trial = team
+        .entitys
+        .iter()
+        .find(|entity| entity.trial_id == Some(2_241_001))
+        .unwrap();
+    assert_eq!(owned.position, Some(1));
+    assert_eq!(trial.position, Some(2));
+}
+
+#[tokio::test]
+async fn explicit_substitute_position_preserves_compacted_slot_order() {
+    let pool = owned_hero_pool().await;
+    for (trial_position, trial_first) in [(-1, true), (-2, false)] {
+        let group = FightGroup {
+            sub_hero_list: vec![42],
+            trial_hero_list: vec![TrialHero {
+                trial_id: Some(2_241_001),
+                pos: Some(trial_position),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+
+        let (team, modifiers) = build_attacker_team_with_destiny_modifiers(&pool, 7, &group)
+            .await
+            .unwrap();
+        assert_eq!(team.sub_entitys.len(), 2);
+        assert_eq!(team.sub_entitys[0].trial_id == Some(2_241_001), trial_first);
+        let trial = team
+            .sub_entitys
+            .iter()
+            .find(|entity| entity.trial_id == Some(2_241_001))
+            .unwrap();
+        let owned = team
+            .sub_entitys
+            .iter()
+            .find(|entity| entity.trial_id != Some(2_241_001))
+            .unwrap();
+        assert_eq!(trial.uid, Some(-1));
+        assert_eq!(owned.uid, Some(-2));
+        let uids = team
+            .sub_entitys
+            .iter()
+            .filter_map(|entity| entity.uid)
+            .collect::<HashSet<_>>();
+        assert_eq!(uids, HashSet::from([-1, -2]));
+        assert_eq!(modifiers.len(), 2);
+        assert!(modifiers.contains_key(&-1));
+        assert!(modifiers.contains_key(&-2));
+    }
+}
+
+#[tokio::test]
+async fn legacy_substitute_position_preserves_inline_slot_order() {
+    let pool = owned_hero_pool().await;
+    for (sub_hero_list, trial_first) in
+        [(vec![-2_241_001, 42], true), (vec![42, -2_241_001], false)]
+    {
+        let group = FightGroup {
+            sub_hero_list,
+            ..Default::default()
+        };
+
+        let (team, modifiers) = build_attacker_team_with_destiny_modifiers(&pool, 7, &group)
+            .await
+            .unwrap();
+        assert_eq!(team.sub_entitys.len(), 2);
+        assert_eq!(team.sub_entitys[0].trial_id == Some(2_241_001), trial_first);
+        let trial = team
+            .sub_entitys
+            .iter()
+            .find(|entity| entity.trial_id == Some(2_241_001))
+            .unwrap();
+        let owned = team
+            .sub_entitys
+            .iter()
+            .find(|entity| entity.trial_id != Some(2_241_001))
+            .unwrap();
+        assert_eq!(trial.uid, Some(-1));
+        assert_eq!(owned.uid, Some(-2));
+        let uids = team
+            .sub_entitys
+            .iter()
+            .filter_map(|entity| entity.uid)
+            .collect::<HashSet<_>>();
+        assert_eq!(uids, HashSet::from([-1, -2]));
+        assert_eq!(modifiers.len(), 2);
+        assert!(modifiers.contains_key(&-1));
+        assert!(modifiers.contains_key(&-2));
+    }
+}
+
+#[tokio::test]
+async fn legacy_main_trial_position_preserves_inline_slot_order() {
+    let pool = owned_hero_pool().await;
+    for (hero_list, trial_first) in [(vec![-2_241_001, 42], true), (vec![42, -2_241_001], false)] {
+        let group = FightGroup {
+            hero_list,
+            ..Default::default()
+        };
+
+        let team = build_attacker_team(&pool, 7, &group).await.unwrap();
+        assert_eq!(team.entitys.len(), 2);
+        assert_eq!(team.entitys[0].trial_id == Some(2_241_001), trial_first);
+    }
+}
+
+#[tokio::test]
+async fn explicit_and_legacy_trial_mix_is_rejected_by_builder_and_deck() {
+    init_config();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let group = FightGroup {
+        hero_list: vec![-2_241_001],
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(2_241_001),
+            pos: Some(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    assert!(build_attacker_team(&pool, 7, &group).await.is_err());
+    assert!(generate_initial_deck(&pool, 7, &group, 0).await.is_err());
+}
+
+#[tokio::test]
+async fn legacy_aid_and_zero_placeholders_preserve_main_and_substitute_slots() {
+    let pool = owned_hero_pool().await;
+
+    for (hero_list, trial_position, owned_position, trial_first) in [
+        (vec![-4, 0, -2_241_001, 42], 3, 4, true),
+        (vec![-4, 0, 42, -2_241_001], 4, 3, false),
+    ] {
+        let group = FightGroup {
+            hero_list,
+            ..Default::default()
+        };
+        let team = build_attacker_team(&pool, 7, &group).await.unwrap();
+        let trial = team
+            .entitys
+            .iter()
+            .find(|entity| entity.trial_id == Some(2_241_001))
+            .unwrap();
+        let owned = team
+            .entitys
+            .iter()
+            .find(|entity| entity.uid == Some(42))
+            .unwrap();
+        assert_eq!(team.entitys[0].trial_id == Some(2_241_001), trial_first);
+        assert_eq!(trial.uid, Some(-5));
+        assert_eq!(trial.position, Some(trial_position));
+        assert_eq!(owned.position, Some(owned_position));
+    }
+
+    for (sub_hero_list, trial_first) in [
+        (vec![-4, 0, -2_241_001, 42], true),
+        (vec![-4, 0, 42, -2_241_001], false),
+    ] {
+        let group = FightGroup {
+            sub_hero_list,
+            ..Default::default()
+        };
+        let (team, modifiers) = build_attacker_team_with_destiny_modifiers(&pool, 7, &group)
+            .await
+            .unwrap();
+        assert_eq!(team.sub_entitys.len(), 2);
+        assert_eq!(team.sub_entitys[0].trial_id == Some(2_241_001), trial_first);
+        let trial = team
+            .sub_entitys
+            .iter()
+            .find(|entity| entity.trial_id == Some(2_241_001))
+            .unwrap();
+        let owned = team
+            .sub_entitys
+            .iter()
+            .find(|entity| entity.trial_id != Some(2_241_001))
+            .unwrap();
+        assert_eq!(trial.uid, Some(-5));
+        assert_eq!(owned.uid, Some(-6));
+        assert!(modifiers.contains_key(&-5));
+        assert!(modifiers.contains_key(&-6));
+    }
+}
+
+#[tokio::test]
+async fn duplicate_explicit_signed_positions_are_rejected_everywhere() {
+    init_config();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let trial_ids = config::configs::get()
+        .hero_trial
+        .all()
+        .iter()
+        .map(|trial| trial.id)
+        .take(2)
+        .collect::<Vec<_>>();
+    assert_eq!(trial_ids.len(), 2);
+
+    for position in [1, -1] {
+        let group = FightGroup {
+            trial_hero_list: trial_ids
+                .iter()
+                .map(|trial_id| TrialHero {
+                    trial_id: Some(*trial_id),
+                    pos: Some(position),
+                    ..Default::default()
+                })
+                .collect(),
+            ..Default::default()
+        };
+
+        assert!(build_attacker_team(&pool, 7, &group).await.is_err());
+        assert!(generate_initial_deck(&pool, 7, &group, 0).await.is_err());
+    }
+}
+
+#[tokio::test]
+async fn explicit_zero_placeholders_preserve_main_and_substitute_slots() {
+    let pool = owned_hero_pool().await;
+    let main_group = FightGroup {
+        hero_list: vec![0, 42],
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(2_241_001),
+            pos: Some(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let main_team = build_attacker_team(&pool, 7, &main_group).await.unwrap();
+    let owned = main_team
+        .entitys
+        .iter()
+        .find(|entity| entity.uid == Some(42))
+        .unwrap();
+    assert_eq!(owned.position, Some(3));
+
+    let sub_group = FightGroup {
+        sub_hero_list: vec![0, 42],
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(2_241_001),
+            pos: Some(-2),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let sub_team = build_attacker_team(&pool, 7, &sub_group).await.unwrap();
+    assert_eq!(sub_team.sub_entitys.len(), 2);
+    assert_eq!(sub_team.sub_entitys[0].trial_id, Some(2_241_001));
+    assert_eq!(sub_team.sub_entitys[1].trial_id, Some(0));
+    assert_eq!(sub_team.sub_entitys[1].model_id, Some(3025));
+}
+
+#[tokio::test]
+async fn minimum_signed_trial_position_is_rejected_everywhere() {
+    init_config();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let group = FightGroup {
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(2_241_001),
+            pos: Some(i32::MIN),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    assert!(normalize_trial_requests(&group).is_err());
+    assert!(generate_initial_deck(&pool, 7, &group, 0).await.is_err());
+    assert!(build_attacker_team(&pool, 7, &group).await.is_err());
 }

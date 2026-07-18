@@ -1,38 +1,37 @@
 use std::sync::{Arc, Once};
 
-use rand::SeedableRng;
-use gameserver::state::battle::destiny::{
-    DestinyState, HeroBuildContext, HeroSource,
-};
+use gameserver::state::battle::destiny::{DestinyModifierMap, ResolvedDestinyAttributes};
+use gameserver::state::battle::destiny::{DestinyState, HeroBuildContext, HeroSource};
+use gameserver::state::battle::effects::effect_types::EffectType;
 use gameserver::state::battle::entity_builder::resolve_entity_kit;
 use gameserver::state::battle::fight_builder::{
-    attacker_substitute_uid, attacker_trial_uid_count, build_attacker_team, enemy_entity_uid,
-    try_attacker_substitute_uid,
+    attacker_substitute_uid, enemy_entity_uid, try_attacker_substitute_uid,
 };
-use gameserver::state::battle::effects::effect_types::EffectType;
-use gameserver::state::battle::generate_ai_initial_deck;
 use gameserver::state::battle::manager::buff_mgr::BuffMgr;
-use gameserver::state::battle::manager::card_mgr::FightCardMgr;
 use gameserver::state::battle::manager::calculate_mgr::{
     FightCalculateDataMgr, apply_power_info_change,
 };
+use gameserver::state::battle::manager::card_mgr::FightCardMgr;
 use gameserver::state::battle::manager::entity_mgr::FightEntityDataMgr;
-use gameserver::state::battle::manager::round_mgr::FightRoundMgr;
 use gameserver::state::battle::manager::fight_data_mgr::FightDataMgr;
+use gameserver::state::battle::manager::round_mgr::FightRoundMgr;
 use gameserver::state::battle::round::RoundState;
 use gameserver::state::battle::skill_executor::SkillExecutor;
-use gameserver::state::battle::destiny::{DestinyModifierMap, ResolvedDestinyAttributes};
+use gameserver::state::battle::trial::{active_hero_count, normalize_trial_requests};
+use gameserver::state::battle::{generate_ai_initial_deck, max_ap_for_fight_group};
+use rand::SeedableRng;
 use sonettobuf::{
-    ActEffect, BeginRoundOper, CardInfo, Fight, FightEntityInfo, FightTeam, HeroAttribute,
-    HeroSpAttribute, PowerInfo, FightGroup,
+    ActEffect, BeginRoundOper, CardInfo, Fight, FightEntityInfo, FightGroup, FightTeam,
+    HeroAttribute, HeroSpAttribute, PowerInfo, TrialHero,
 };
 
 static CONFIG_INIT: Once = Once::new();
 
 fn init_config() {
     CONFIG_INIT.call_once(|| {
-        let data_dir = std::env::var("JSON_DATA_DIR")
-            .expect("JSON_DATA_DIR must point at the international 3.6 runtime excel2json directory");
+        let data_dir = std::env::var("JSON_DATA_DIR").expect(
+            "JSON_DATA_DIR must point at the international 3.6 runtime excel2json directory",
+        );
         config::configs::init(&data_dir).expect("failed to initialize config data");
     });
 }
@@ -94,8 +93,8 @@ fn five_runtime_power_add_facets_initialize_one_to_five() {
 
 #[test]
 fn non_power_destiny_facet_does_not_invent_power_info() {
-    let kit = resolve_entity_kit(&power_context(3110, 311001))
-        .expect("non-power facet should resolve");
+    let kit =
+        resolve_entity_kit(&power_context(3110, 311001)).expect("non-power facet should resolve");
     assert!(kit.power_infos.is_empty());
 }
 
@@ -168,15 +167,17 @@ fn power_info_change_rejects_missing_absolute_num() {
             max: Some(5),
         }],
     );
-    assert!(apply_power_info_change(
-        &mut entity,
-        &PowerInfo {
-            power_id: Some(1),
-            num: None,
-            max: Some(5),
-        },
-    )
-    .is_err());
+    assert!(
+        apply_power_info_change(
+            &mut entity,
+            &PowerInfo {
+                power_id: Some(1),
+                num: None,
+                max: Some(5),
+            },
+        )
+        .is_err()
+    );
     assert_eq!(entity.power_infos[0].num, Some(2));
 }
 
@@ -190,15 +191,17 @@ fn power_info_change_rejects_missing_absolute_max() {
             max: Some(5),
         }],
     );
-    assert!(apply_power_info_change(
-        &mut entity,
-        &PowerInfo {
-            power_id: Some(1),
-            num: Some(3),
-            max: None,
-        },
-    )
-    .is_err());
+    assert!(
+        apply_power_info_change(
+            &mut entity,
+            &PowerInfo {
+                power_id: Some(1),
+                num: Some(3),
+                max: None,
+            },
+        )
+        .is_err()
+    );
     assert_eq!(entity.power_infos[0].num, Some(2));
 }
 
@@ -242,31 +245,20 @@ fn power_info_change_updates_substitute_by_uid() {
     let mut bloodtithe = Default::default();
     let mut buffs = BuffMgr::new();
     let mut effect = ActEffect {
-            effect_type: Some(EffectType::PowerInfoChange as i32),
-            target_id: Some(-42),
-            power_info: Some(PowerInfo {
-                power_id: Some(1),
-                num: Some(99),
-                max: Some(5),
-            }),
-            ..Default::default()
-        };
-    calc.play_act_effect_data(
-        &mut effect,
-        &mut fight,
-        &mut bloodtithe,
-        &mut buffs,
-    )
-    .expect("substitute power update should resolve");
+        effect_type: Some(EffectType::PowerInfoChange as i32),
+        target_id: Some(-42),
+        power_info: Some(PowerInfo {
+            power_id: Some(1),
+            num: Some(99),
+            max: Some(5),
+        }),
+        ..Default::default()
+    };
+    calc.play_act_effect_data(&mut effect, &mut fight, &mut bloodtithe, &mut buffs)
+        .expect("substitute power update should resolve");
 
     assert_eq!(
-        fight
-            .attacker
-            .as_ref()
-            .unwrap()
-            .sub_entitys[0]
-            .power_infos[0]
-            .num,
+        fight.attacker.as_ref().unwrap().sub_entitys[0].power_infos[0].num,
         Some(5)
     );
     assert_eq!(effect.power_info.unwrap().num, Some(5));
@@ -302,14 +294,18 @@ fn round_snapshot_retains_power_infos_for_main_and_substitute() {
     let snapshot = state.export_snapshot();
 
     assert_eq!(snapshot.ex_point_info.len(), 2);
-    assert!(snapshot
-        .ex_point_info
-        .iter()
-        .any(|info| info.uid == Some(1) && info.power_infos[0].num == Some(2)));
-    assert!(snapshot
-        .ex_point_info
-        .iter()
-        .any(|info| info.uid == Some(-1) && info.power_infos[0].num == Some(3)));
+    assert!(
+        snapshot
+            .ex_point_info
+            .iter()
+            .any(|info| info.uid == Some(1) && info.power_infos[0].num == Some(2))
+    );
+    assert!(
+        snapshot
+            .ex_point_info
+            .iter()
+            .any(|info| info.uid == Some(-1) && info.power_infos[0].num == Some(3))
+    );
 }
 
 #[tokio::test]
@@ -356,6 +352,131 @@ async fn fight_data_mgr_initial_round_retains_power_infos() {
         .and_then(|info| info.attribute.as_ref())
         .expect("main hero special attributes should be present");
     assert_eq!(sp.clutch, Some(9));
+}
+
+#[tokio::test]
+async fn round_pipeline_uses_default_max_ap_for_each_active_roster_size() {
+    for active_count in 1..=4 {
+        let expected_max_ap = if active_count <= 2 { 2 } else { 4 };
+
+        let (initial_round, _, mut manager) =
+            gameserver::state::battle::round_builder::build_initial_round(
+                Fight::default(),
+                vec![],
+                vec![],
+                DestinyModifierMap::new(),
+                expected_max_ap,
+            )
+            .await
+            .expect("initial round should build");
+        assert_eq!(initial_round.act_point, Some(expected_max_ap));
+
+        let mut rng = rand::rngs::StdRng::seed_from_u64(active_count as u64);
+        let later_round = {
+            let (round_mgr, card_mgr, calc, fight, bloodtithe, buff_mgr) = manager.split_all_mut();
+            round_mgr
+                .process_round(
+                    &mut rng,
+                    card_mgr,
+                    calc,
+                    fight,
+                    bloodtithe,
+                    vec![],
+                    vec![],
+                    vec![],
+                    buff_mgr,
+                )
+                .await
+                .expect("later round should build")
+        };
+        assert_eq!(later_round.act_point, Some(expected_max_ap));
+    }
+}
+
+#[test]
+fn fight_group_max_ap_counts_only_active_main_entries() {
+    init_config();
+    let game_data = config::configs::get();
+    let episode_id = game_data
+        .episode
+        .iter()
+        .find(|episode| {
+            game_data
+                .battle
+                .iter()
+                .any(|battle| battle.id == episode.battle_id && battle.player_max >= 4)
+        })
+        .expect("runtime should contain a battle with at least four action points")
+        .id;
+
+    let cases = [
+        (
+            "one owned; substitutes excluded",
+            FightGroup {
+                hero_list: vec![42],
+                sub_hero_list: vec![43, -1, -2_241_001],
+                ..Default::default()
+            },
+            1,
+            2,
+        ),
+        (
+            "owned plus main aid; zero excluded",
+            FightGroup {
+                hero_list: vec![42, -1, 0],
+                sub_hero_list: vec![43, -2, -2_241_001],
+                ..Default::default()
+            },
+            2,
+            2,
+        ),
+        (
+            "owned aid and explicit main trial",
+            FightGroup {
+                hero_list: vec![42, -1],
+                sub_hero_list: vec![43, -2],
+                trial_hero_list: vec![
+                    TrialHero {
+                        trial_id: Some(2_241_001),
+                        pos: Some(3),
+                        ..Default::default()
+                    },
+                    TrialHero {
+                        trial_id: Some(2_241_002),
+                        pos: Some(-3),
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            },
+            3,
+            4,
+        ),
+        (
+            "two owned aid and legacy main trial",
+            FightGroup {
+                hero_list: vec![42, -1, -2_241_001, 44],
+                sub_hero_list: vec![43, -2, -2_241_002],
+                ..Default::default()
+            },
+            4,
+            4,
+        ),
+    ];
+
+    for (label, group, expected_active, expected_max_ap) in cases {
+        let trials = normalize_trial_requests(&group).unwrap();
+        assert_eq!(
+            active_hero_count(&group, &trials),
+            expected_active,
+            "{label}"
+        );
+        assert_eq!(
+            max_ap_for_fight_group(episode_id, &group).unwrap(),
+            expected_max_ap,
+            "{label}"
+        );
+    }
 }
 
 #[tokio::test]
@@ -530,7 +651,10 @@ async fn final_hit_marks_the_same_round_finished() {
         .await
         .expect("final-hit round should build");
 
-    assert_eq!(fight.defender.as_ref().unwrap().entitys[0].current_hp, Some(0));
+    assert_eq!(
+        fight.defender.as_ref().unwrap().entitys[0].current_hp,
+        Some(0)
+    );
     assert_eq!(round.is_finish, Some(true));
 }
 
@@ -590,47 +714,9 @@ fn substitute_uids_start_after_trial_uids() {
 }
 
 #[test]
-fn sparse_legacy_trial_uids_reserve_their_wire_ordinals() {
-    let trial_count = attacker_trial_uid_count(&[-2], 0);
-    assert_eq!(trial_count, 2);
-    assert_eq!(attacker_substitute_uid(trial_count, 0), -3);
-}
-
-#[test]
-fn attacker_uid_allocator_rejects_the_defender_namespace() {
+fn attacker_uid_allocator_accepts_the_last_attacker_ordinal_only() {
+    assert_eq!(try_attacker_substitute_uid(999, 0).unwrap(), -1_000);
     assert!(try_attacker_substitute_uid(1_000, 0).is_err());
-    assert_eq!(attacker_trial_uid_count(&[-1_001], 0), 1_001);
-}
-
-#[tokio::test]
-async fn legacy_trial_minus_1000_reports_namespace_error_before_db_lookup() {
-    init_config();
-    let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
-    let group = FightGroup {
-        hero_list: vec![-1_000],
-        sub_hero_list: vec![1],
-        ..Default::default()
-    };
-
-    let error = build_attacker_team(&pool, 7, &group)
-        .await
-        .expect_err("substitute UID must not enter the defender namespace");
-    assert!(error.to_string().contains("crosses the defender UID namespace"));
-}
-
-#[tokio::test]
-async fn legacy_trial_minus_1001_is_rejected_before_namespace_collision() {
-    init_config();
-    let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
-    let group = FightGroup {
-        hero_list: vec![-1_001],
-        ..Default::default()
-    };
-
-    let error = build_attacker_team(&pool, 7, &group)
-        .await
-        .expect_err("legacy trial UID must not enter the defender namespace");
-    assert!(error.to_string().contains("crosses the defender UID namespace"));
 }
 
 #[test]

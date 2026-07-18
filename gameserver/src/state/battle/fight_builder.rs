@@ -1,8 +1,11 @@
 use super::BattleContext;
-use super::entity_builder;
 use super::destiny::{
     DestinyModifierMap, DestinyState, HeroBaseAttributes, HeroBuildContext, HeroSource,
     ResolvedDestinyAttributes,
+};
+use super::entity_builder;
+use super::trial::{
+    MAX_TRIAL_UID_ORDINAL, normalize_trial_requests, reserved_attacker_uid_ordinal,
 };
 use anyhow::Result;
 
@@ -17,7 +20,9 @@ pub async fn build_fight(
     ctx: &BattleContext,
     fight_group: &sonettobuf::FightGroup,
 ) -> Result<Fight> {
-    Ok(build_fight_with_destiny_modifiers(pool, ctx, fight_group).await?.0)
+    Ok(build_fight_with_destiny_modifiers(pool, ctx, fight_group)
+        .await?
+        .0)
 }
 
 pub async fn build_fight_with_destiny_modifiers(
@@ -61,9 +66,11 @@ pub async fn build_attacker_team(
     user_id: i64,
     fight_group: &sonettobuf::FightGroup,
 ) -> Result<FightTeam> {
-    Ok(build_attacker_team_with_destiny_modifiers(pool, user_id, fight_group)
-        .await?
-        .0)
+    Ok(
+        build_attacker_team_with_destiny_modifiers(pool, user_id, fight_group)
+            .await?
+            .0,
+    )
 }
 
 pub async fn build_attacker_team_with_destiny_modifiers(
@@ -72,38 +79,86 @@ pub async fn build_attacker_team_with_destiny_modifiers(
     fight_group: &sonettobuf::FightGroup,
 ) -> Result<(FightTeam, DestinyModifierMap)> {
     let mut entitys = Vec::new();
-    let mut sub_entitys = Vec::new();
+    let mut ordered_sub_entitys = Vec::new();
     let mut modifiers = DestinyModifierMap::new();
-    let trial_uid_count = attacker_trial_uid_count(
-        &fight_group.hero_list,
-        fight_group.trial_hero_list.len(),
-    );
-    if trial_uid_count > MAX_ATTACKER_TRIAL_UID_ORDINAL {
-        return Err(anyhow::anyhow!(
-            "attacker trial UID ordinal {trial_uid_count} crosses the defender UID namespace"
-        ));
-    }
+    let trials = normalize_trial_requests(fight_group)?;
+    let trial_uid_count = reserved_attacker_uid_ordinal(fight_group, &trials);
     let hero = UserHeroModel::new(user_id, pool.clone());
+    let mut occupied_positions = HashSet::new();
+    let mut occupied_sub_positions = HashSet::new();
+
+    for position in trials
+        .iter()
+        .filter(|trial| !trial.is_substitute)
+        .filter_map(|trial| trial.position)
+    {
+        if !occupied_positions.insert(position) {
+            return Err(anyhow::anyhow!("duplicate attacker position {position}"));
+        }
+    }
+    for position in trials
+        .iter()
+        .filter(|trial| trial.is_substitute)
+        .filter_map(|trial| trial.position)
+    {
+        let position = position
+            .checked_neg()
+            .ok_or_else(|| anyhow::anyhow!("invalid substitute trial position {position}"))?;
+        if !occupied_sub_positions.insert(position) {
+            return Err(anyhow::anyhow!("duplicate substitute position {position}"));
+        }
+    }
 
     // Main heroes
-    for (position, hero_uid) in fight_group.hero_list.iter().enumerate() {
+    let explicit_trials = !fight_group.trial_hero_list.is_empty();
+    let mut compacted_position = 1;
+    for (wire_position, hero_uid) in fight_group.hero_list.iter().enumerate() {
+        if *hero_uid < 0 && !explicit_trials {
+            continue;
+        }
+        let position = if explicit_trials {
+            claim_next_attacker_position(&mut occupied_positions, &mut compacted_position)?
+        } else {
+            let position = i32::try_from(wire_position + 1)
+                .map_err(|_| anyhow::anyhow!("attacker hero position is outside i32 range"))?;
+            if !occupied_positions.insert(position) {
+                return Err(anyhow::anyhow!("duplicate attacker position {position}"));
+            }
+            position
+        };
         if *hero_uid <= 0 {
             continue;
         }
         let hero_data = hero.get_uid(*hero_uid as i32).await?;
         let entity =
-            entity_builder::build_hero_entity(pool, &hero_data, (position + 1) as i32, 1, false)
-                .await?;
+            entity_builder::build_hero_entity(pool, &hero_data, position, 1, false).await?;
         collect_destiny_modifiers(&mut modifiers, entity.uid, &hero_data, false);
         entitys.push(entity);
     }
 
     // Sub heroes
-    for (index, hero_uid) in fight_group.sub_hero_list.iter().enumerate() {
+    let mut owned_substitute_index = 0;
+    let mut compacted_sub_position = 1;
+    for (wire_position, hero_uid) in fight_group.sub_hero_list.iter().enumerate() {
+        if *hero_uid < 0 && !explicit_trials {
+            continue;
+        }
+        let sub_position = if explicit_trials {
+            claim_next_attacker_position(&mut occupied_sub_positions, &mut compacted_sub_position)?
+        } else {
+            let position = i32::try_from(wire_position + 1).map_err(|_| {
+                anyhow::anyhow!("attacker substitute position is outside i32 range")
+            })?;
+            if !occupied_sub_positions.insert(position) {
+                return Err(anyhow::anyhow!("duplicate substitute position {position}"));
+            }
+            position
+        };
         if *hero_uid <= 0 {
             continue;
         }
-        let uid = try_attacker_substitute_uid(trial_uid_count, index)?;
+        let uid = try_attacker_substitute_uid(trial_uid_count, owned_substitute_index)?;
+        owned_substitute_index += 1;
         let hero_data = hero.get_uid(*hero_uid as i32).await?;
         let mut entity = entity_builder::build_hero_entity(pool, &hero_data, -1, 1, true).await?;
         entity.uid = Some(uid);
@@ -111,54 +166,42 @@ pub async fn build_attacker_team_with_destiny_modifiers(
             enhance_info.uid = Some(uid);
         }
         collect_destiny_modifiers(&mut modifiers, entity.uid, &hero_data, true);
-        sub_entitys.push(entity);
+        ordered_sub_entitys.push((sub_position, entity));
     }
 
-    // Trial heroes carry their explicit trial_id and position in the fight
-    // group. Negative hero-list UIDs are legacy wire conventions and are
-    // ignored above so a trial is constructed exactly once here.
-    let mut trial_ids = HashSet::new();
-    let mut trial_positions = HashSet::new();
-    for (index, trial) in fight_group.trial_hero_list.iter().enumerate() {
-        let Some(trial_id) = trial.trial_id else {
-            return Err(anyhow::anyhow!("trial hero at index {index} is missing trial_id"));
+    for trial in trials {
+        let (position, substitute_position) = if trial.is_substitute {
+            let position = trial.position.and_then(i32::checked_neg).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "substitute trial {} has no normalized position",
+                    trial.trial_id
+                )
+            })?;
+            (-1, Some(position))
+        } else {
+            (
+                trial.position.ok_or_else(|| {
+                    anyhow::anyhow!("active trial {} has no normalized position", trial.trial_id)
+                })?,
+                None,
+            )
         };
-        if !trial_ids.insert(trial_id) {
-            return Err(anyhow::anyhow!("duplicate trial_id {trial_id}"));
-        }
-        let position = trial.pos.unwrap_or((entitys.len() + 1) as i32);
-        if !trial_positions.insert(position) {
-            return Err(anyhow::anyhow!("duplicate trial position {position}"));
-        }
-        let uid = -((index + 1) as i64);
-        let (entity, modifier) = build_trial_hero_entity(uid, trial_id, position, 1)?;
-        modifiers.insert(uid, modifier);
-        entitys.push(entity);
-    }
-
-    if fight_group.trial_hero_list.is_empty() {
-        let game_data = config::configs::get();
-        for (index, hero_uid) in fight_group
-            .hero_list
-            .iter()
-            .copied()
-            .filter(|uid| *uid < 0)
-            .enumerate()
-        {
-            let trial_index = hero_uid
-                .checked_neg()
-                .and_then(|uid| usize::try_from(uid - 1).ok())
-                .unwrap_or(index);
-            let Some(trial) = game_data.hero_trial.iter().nth(trial_index) else {
-                return Err(anyhow::anyhow!("unknown legacy trial hero UID {hero_uid}"));
-            };
-            let position = (entitys.len() + 1) as i32;
-            let (entity, modifier) =
-                build_trial_hero_entity(hero_uid, trial.id, position, 1)?;
-            modifiers.insert(hero_uid, modifier);
+        let (entity, modifier) =
+            build_trial_hero_entity(trial.uid, trial.trial_id, position, 1, trial.is_substitute)?;
+        modifiers.insert(trial.uid, modifier);
+        if let Some(substitute_position) = substitute_position {
+            ordered_sub_entitys.push((substitute_position, entity));
+        } else {
             entitys.push(entity);
         }
     }
+
+    entitys.sort_by_key(|entity| entity.position.unwrap_or(i32::MAX));
+    ordered_sub_entitys.sort_by_key(|(position, _)| *position);
+    let sub_entitys = ordered_sub_entitys
+        .into_iter()
+        .map(|(_, entity)| entity)
+        .collect();
 
     let player_entity = entity_builder::build_player_entity(user_id, 1);
 
@@ -171,6 +214,20 @@ pub async fn build_attacker_team_with_destiny_modifiers(
         build_player_skills(fight_group.cloth_id),
     );
     Ok((team, modifiers))
+}
+
+fn claim_next_attacker_position(occupied: &mut HashSet<i32>, next: &mut i32) -> Result<i32> {
+    while occupied.contains(next) {
+        *next = next
+            .checked_add(1)
+            .ok_or_else(|| anyhow::anyhow!("attacker position overflow"))?;
+    }
+    let position = *next;
+    occupied.insert(position);
+    *next = next
+        .checked_add(1)
+        .ok_or_else(|| anyhow::anyhow!("attacker position overflow"))?;
+    Ok(position)
 }
 
 fn collect_destiny_modifiers(
@@ -201,6 +258,7 @@ fn build_trial_hero_entity(
     trial_id: i32,
     position: i32,
     team_type: i32,
+    is_substitute: bool,
 ) -> Result<(FightEntityInfo, ResolvedDestinyAttributes)> {
     use config::configs;
 
@@ -285,7 +343,7 @@ fn build_trial_hero_entity(
             level: i32::from(has_destiny),
             facet_id: trial_data.facets_id,
         },
-        is_substitute: false,
+        is_substitute,
         hero_type: hero_config.hero_type,
         source: HeroSource::Trial,
     };
@@ -303,8 +361,8 @@ fn build_trial_hero_entity(
         defense,
         mdefense,
     };
-    let modifier = entity_builder::resolve_entity_destiny_attributes(&context, base)
-        .map_err(|error| {
+    let modifier =
+        entity_builder::resolve_entity_destiny_attributes(&context, base).map_err(|error| {
             anyhow::anyhow!(
                 "failed to resolve trial {} hero {} attributes: {}",
                 trial_id,
@@ -637,8 +695,6 @@ pub fn enemy_entity_uid(index: usize) -> i64 {
     -1001 - index as i64
 }
 
-const MAX_ATTACKER_TRIAL_UID_ORDINAL: usize = 1_000;
-
 /// Reserve `-1..=-trial_count` for trial heroes, then assign substitutes.
 pub fn attacker_substitute_uid(trial_count: usize, substitute_index: usize) -> i64 {
     try_attacker_substitute_uid(trial_count, substitute_index)
@@ -646,39 +702,17 @@ pub fn attacker_substitute_uid(trial_count: usize, substitute_index: usize) -> i
 }
 
 /// Allocate a substitute UID without entering the defender namespace.
-pub fn try_attacker_substitute_uid(
-    trial_count: usize,
-    substitute_index: usize,
-) -> Result<i64> {
+pub fn try_attacker_substitute_uid(trial_count: usize, substitute_index: usize) -> Result<i64> {
     let ordinal = trial_count
         .checked_add(substitute_index)
         .and_then(|value| value.checked_add(1))
         .ok_or_else(|| anyhow::anyhow!("attacker substitute UID ordinal overflow"))?;
-    if ordinal > MAX_ATTACKER_TRIAL_UID_ORDINAL {
+    if ordinal > MAX_TRIAL_UID_ORDINAL {
         return Err(anyhow::anyhow!(
             "attacker substitute UID ordinal {ordinal} crosses the defender UID namespace"
         ));
     }
     Ok(-(ordinal as i64))
-}
-
-/// Return the number of negative UID ordinals reserved by attacker trials.
-///
-/// Explicit trial entries are normalized to `-1..=-N`. Legacy requests carry
-/// their ordinal directly in `hero_list`, so reserve the highest ordinal rather
-/// than merely counting entries; sparse inputs such as `[-2]` must not collide
-/// with the first substitute.
-pub fn attacker_trial_uid_count(hero_list: &[i64], explicit_trial_count: usize) -> usize {
-    if explicit_trial_count != 0 {
-        return explicit_trial_count;
-    }
-
-    hero_list
-        .iter()
-        .filter_map(|uid| uid.checked_neg())
-        .filter_map(|uid| usize::try_from(uid).ok())
-        .max()
-        .unwrap_or(0)
 }
 
 fn parse_monster_skill_group(active_skill: &str, target_group: i32) -> Vec<i32> {

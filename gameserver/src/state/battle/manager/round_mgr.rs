@@ -17,6 +17,7 @@ use crate::state::battle::{
 pub struct FightRoundMgr {
     fight: Arc<Fight>,
     destiny_modifiers: Arc<DestinyModifierMap>,
+    max_ap: i32,
 }
 
 impl FightRoundMgr {
@@ -28,9 +29,18 @@ impl FightRoundMgr {
         fight: Arc<Fight>,
         destiny_modifiers: Arc<DestinyModifierMap>,
     ) -> Self {
+        Self::new_with_destiny_modifiers_and_max_ap(fight, destiny_modifiers, 4)
+    }
+
+    pub fn new_with_destiny_modifiers_and_max_ap(
+        fight: Arc<Fight>,
+        destiny_modifiers: Arc<DestinyModifierMap>,
+        max_ap: i32,
+    ) -> Self {
         Self {
             fight,
             destiny_modifiers,
+            max_ap,
         }
     }
 
@@ -51,10 +61,7 @@ impl FightRoundMgr {
         buff_mgr: &mut BuffMgr,
     ) -> Result<FightRound> {
         let (mut steps, mut round_snapshot) = {
-            let mut state = RoundState::new_with_destiny_modifiers(
-                &*fight,
-                (*self.destiny_modifiers).clone(),
-            )?;
+            let mut state = self.build_round_state(fight)?;
 
             state.player_deck = current_deck.clone();
             state.ai_cards = ai_deck.clone();
@@ -88,10 +95,7 @@ impl FightRoundMgr {
         // in the response cannot lag one round behind the server state.
         round_snapshot.ex_point_info = calc.build_ex_point_info(fight);
         round_snapshot.hero_sp_attributes = calc.build_hero_sp_attributes(fight);
-        let authoritative_state = RoundState::new_with_destiny_modifiers(
-            &*fight,
-            (*self.destiny_modifiers).clone(),
-        )?;
+        let authoritative_state = self.build_round_state(fight)?;
         round_snapshot.is_finish = self.check_battle_end(&authoritative_state);
         fight.is_finish = Some(round_snapshot.is_finish);
         calc.on_round_end();
@@ -109,6 +113,13 @@ impl FightRoundMgr {
             .any(|e| e.team_type == Some(1) && e.current_hp.unwrap_or(0) > 0);
 
         !enemies_alive || !heroes_alive
+    }
+
+    fn build_round_state(&self, fight: &Fight) -> Result<RoundState> {
+        let mut state =
+            RoundState::new_with_destiny_modifiers(fight, (*self.destiny_modifiers).clone())?;
+        state.act_point = self.max_ap;
+        Ok(state)
     }
 
     pub fn build_round_response(

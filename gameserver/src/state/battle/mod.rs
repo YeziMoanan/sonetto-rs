@@ -15,6 +15,7 @@ pub mod round_builder;
 pub mod simulator;
 pub mod skill_executor;
 pub mod step_builder;
+pub mod trial;
 pub mod utils;
 
 use anyhow::Result;
@@ -29,7 +30,7 @@ pub static BUFF_UID_COUNTER: AtomicI64 = AtomicI64::new(2);
 
 pub use auto::generate_auto_opers;
 
-pub use cards::{default_max_ap, generate_ai_initial_deck, generate_initial_deck};
+pub use cards::{generate_ai_initial_deck, generate_initial_deck, max_ap_for_fight_group};
 
 use crate::state::battle::manager::fight_data_mgr::FightDataMgr;
 
@@ -54,14 +55,14 @@ pub async fn create_battle(
     let seed = (ctx.player_id as u64) ^ (ctx.episode_id as u64) ^ 0xA11C;
     let ai_deck = generate_ai_initial_deck(&fight, seed).await;
 
-    let (initial_round, modified_fight, fight_data_mgr) =
-        round_builder::build_initial_round(
-            fight,
-            player_deck,
-            ai_deck.clone(),
-            destiny_modifiers,
-        )
-        .await?;
+    let (initial_round, modified_fight, fight_data_mgr) = round_builder::build_initial_round(
+        fight,
+        player_deck,
+        ai_deck.clone(),
+        destiny_modifiers,
+        ctx.max_ap,
+    )
+    .await?;
 
     Ok((modified_fight, initial_round, fight_data_mgr, ai_deck))
 }

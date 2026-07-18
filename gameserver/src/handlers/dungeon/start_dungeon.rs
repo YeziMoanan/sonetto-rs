@@ -1,7 +1,7 @@
 use crate::error::AppError;
 use crate::network::packet::ClientPacket;
 use crate::state::{
-    ActiveBattle, BattleContext, ConnectionContext, create_battle, default_max_ap,
+    max_ap_for_fight_group, ActiveBattle, BattleContext, ConnectionContext, create_battle,
     generate_initial_deck,
 };
 use config::configs;
@@ -45,10 +45,12 @@ pub async fn on_start_dungeon(
 
     let fight_group = request.fight_group.ok_or(AppError::InvalidRequest)?;
 
-    let hero_count = fight_group.hero_list.iter().filter(|&&u| u != 0).count();
+    let max_ap = max_ap_for_fight_group(episode_id, &fight_group).map_err(|error| {
+        tracing::warn!(error = %error, "invalid dungeon trial hero request");
+        AppError::InvalidRequest
+    })?;
 
     let battle_id = episode_cfg.battle_id;
-    let max_ap = default_max_ap(episode_id, hero_count);
 
     let battle_ctx = BattleContext {
         player_id,
