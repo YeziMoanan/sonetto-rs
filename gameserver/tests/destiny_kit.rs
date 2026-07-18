@@ -26,13 +26,36 @@ fn resolve(
     let game = config::configs::get();
     let index = config::destiny::DestinyConfigIndex::try_from_game_db(game).unwrap();
     let character = game.character.get(hero_id).unwrap();
-    resolve_hero_kit(
+    resolve_with_rank_skin(
         &index,
+        game,
+        character.skin_id,
+        3,
+        hero_id,
+        ex_skill_level,
+        destiny_rank,
+        facet_id,
+    )
+}
+
+fn resolve_with_rank_skin(
+    index: &config::destiny::DestinyConfigIndex,
+    game: &config::GameDB,
+    skin: i32,
+    rank: i32,
+    hero_id: i32,
+    ex_skill_level: i32,
+    destiny_rank: i32,
+    facet_id: i32,
+) -> gameserver::state::battle::destiny::ResolvedHeroKit {
+    let character = game.character.get(hero_id).unwrap();
+    resolve_hero_kit(
+        index,
         game,
         &HeroBuildContext {
             hero_id,
-            skin: character.skin_id,
-            rank: 3,
+            skin,
+            rank,
             ex_skill_level,
             destiny: DestinyState {
                 rank: destiny_rank,
@@ -58,6 +81,36 @@ fn normal_sparse_ex_rows_use_last_nonempty_value() {
 fn ultimate_uses_latest_nonzero_row_not_level_one() {
     let kit = resolve(3098, 5, 0, 0);
     assert_eq!(kit.ultimate, 30980133);
+}
+
+#[test]
+fn rank_replacement_uses_skin_rank_and_replacement_hero_type() {
+    let kit = resolve(3120, 0, 0, 0);
+    assert_eq!(kit.skill_group_1, vec![31200111, 31200112, 31200113]);
+    assert_eq!(kit.skill_group_2, vec![31200151, 31200152, 31200153]);
+    assert_eq!(kit.ultimate, 31200131);
+
+    let ex_level_one = resolve(3120, 1, 0, 0);
+    assert_eq!(ex_level_one.skill_group_1, vec![31200114, 31200115, 31200116]);
+    assert_eq!(ex_level_one.skill_group_2, vec![31200154, 31200155, 31200156]);
+    assert_eq!(ex_level_one.ultimate, 31200131);
+}
+
+#[test]
+fn rank_replacement_requires_threshold_rank_and_matching_skin() {
+    init_config();
+    let game = config::configs::get();
+    let index = config::destiny::DestinyConfigIndex::try_from_game_db(game).unwrap();
+
+    let low_rank = resolve_with_rank_skin(&index, game, 312001, 2, 3120, 0, 0, 0);
+    assert_eq!(low_rank.skill_group_1, vec![31200201, 31200202, 31200203]);
+    assert_eq!(low_rank.skill_group_2, vec![31200211, 31200212, 31200213]);
+    assert_eq!(low_rank.ultimate, 0);
+
+    let wrong_skin = resolve_with_rank_skin(&index, game, 312099, 3, 3120, 0, 0, 0);
+    assert_eq!(wrong_skin.skill_group_1, low_rank.skill_group_1);
+    assert_eq!(wrong_skin.skill_group_2, low_rank.skill_group_2);
+    assert_eq!(wrong_skin.ultimate, low_rank.ultimate);
 }
 
 #[test]

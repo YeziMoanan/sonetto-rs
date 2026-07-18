@@ -70,14 +70,36 @@ pub fn resolve_hero_kit(
         DestinyResolveError::InvalidConfig(format!("missing character {}", context.hero_id))
     })?;
 
+    let rank_replacement = active_rank_replacement(game, character, context);
+    let (skill, ultimate, effective_hero_type, replacement_source) = rank_replacement
+        .map(|replacement| {
+            (
+                replacement.skill.as_str(),
+                replacement.ex_skill,
+                replacement.hero_type,
+                Some(format!("character_rank_replace:{}", replacement.id)),
+            )
+        })
+        .unwrap_or((&character.skill, character.ex_skill, context.hero_type, None));
+
     let mut resolved = ResolvedHeroKit {
-        skill_group_1: parse_character_skill_group(&character.skill, 1, context.hero_type)?,
-        skill_group_2: parse_character_skill_group(&character.skill, 2, context.hero_type)?,
-        ultimate: character.ex_skill,
+        skill_group_1: parse_character_skill_group(skill, 1, effective_hero_type)?,
+        skill_group_2: parse_character_skill_group(skill, 2, effective_hero_type)?,
+        ultimate,
         passives: base_passives(game, context.hero_id),
         power_infos: Vec::new(),
         trace: Vec::new(),
     };
+
+    if let Some(source_key) = replacement_source {
+        resolved.trace.push(DestinyTrace {
+            source_key,
+            detail: format!(
+                "rank replacement active at rank {} skin {} hero type {}",
+                context.rank, context.skin, effective_hero_type
+            ),
+        });
+    }
 
     let active_facet = active_facet(index, context, &mut resolved.trace)?;
     let reshape_active = active_facet.is_some_and(|facet| facet.ex_level_exchange);
@@ -100,7 +122,7 @@ pub fn resolve_hero_kit(
             replace_group_from_value(
                 &mut resolved.skill_group_1,
                 &row.skill_group1,
-                context.hero_type,
+                effective_hero_type,
                 "skill_group_1",
                 &source_key,
                 &mut resolved.trace,
@@ -108,7 +130,7 @@ pub fn resolve_hero_kit(
             replace_group_from_value(
                 &mut resolved.skill_group_2,
                 &row.skill_group2,
-                context.hero_type,
+                effective_hero_type,
                 "skill_group_2",
                 &source_key,
                 &mut resolved.trace,
@@ -133,7 +155,7 @@ pub fn resolve_hero_kit(
             replace_group_from_value(
                 &mut resolved.skill_group_1,
                 &row.skill_group1,
-                context.hero_type,
+                effective_hero_type,
                 "skill_group_1",
                 &source_key,
                 &mut resolved.trace,
@@ -141,7 +163,7 @@ pub fn resolve_hero_kit(
             replace_group_from_value(
                 &mut resolved.skill_group_2,
                 &row.skill_group2,
-                context.hero_type,
+                effective_hero_type,
                 "skill_group_2",
                 &source_key,
                 &mut resolved.trace,
@@ -244,6 +266,23 @@ pub fn resolve_hero_kit(
     }
 
     Ok(resolved)
+}
+
+fn active_rank_replacement<'a>(
+    game: &'a GameDB,
+    character: &config::character::Character,
+    context: &HeroBuildContext,
+) -> Option<&'a config::character_rank_replace::CharacterRankReplace> {
+    // character_limited is not loaded into GameDB. In the checked-in 3.6 runtime, the only
+    // replacement hero's base and mv skins both declare specialLive2d "1#3", making this
+    // rank >= 3 and base/mv skin check equivalent for that data set.
+    if context.rank < 3
+        || context.skin <= 0
+        || (context.skin != character.skin_id && context.skin != character.mvskin_id)
+    {
+        return None;
+    }
+    game.character_rank_replace.get(context.hero_id)
 }
 
 fn active_facet<'a>(
