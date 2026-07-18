@@ -1,13 +1,12 @@
 use crate::error::AppError;
 use config::configs;
 use database::models::game::heros::{HeroModel, UserHeroModel};
-use once_cell::sync::Lazy;
 use rand::thread_rng;
 use rand::{Rng, SeedableRng, rngs::StdRng, seq::SliceRandom};
 use sonettobuf::{CardInfo, CardInfoPush, Fight, FightGroup};
 use sqlx::SqlitePool;
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
+use std::collections::HashSet;
 
 static CARD_UID: AtomicI64 = AtomicI64::new(1);
 
@@ -18,14 +17,40 @@ pub async fn generate_card_deck(
     fight_group: &FightGroup,
     max_cards: usize,
 ) -> Result<Vec<CardInfo>, AppError> {
+    let mut trial_ids = HashSet::new();
+    for trial in &fight_group.trial_hero_list {
+        let Some(trial_id) = trial.trial_id else {
+            return Err(AppError::InvalidRequest);
+        };
+        if !trial_ids.insert(trial_id) {
+            return Err(AppError::InvalidRequest);
+        }
+    }
     let active_heroes: Vec<i64> = fight_group
         .hero_list
         .iter()
         .copied()
-        .filter(|&u| u != 0)
+        .filter(|&u| u > 0 || (u < 0 && fight_group.trial_hero_list.is_empty()))
+        .chain(
+            fight_group
+                .trial_hero_list
+                .iter()
+                .enumerate()
+                .filter_map(|(index, trial)| {
+                    trial
+                        .trial_id
+                        .is_some()
+                        .then_some(-((index + 1) as i64))
+                }),
+        )
         .collect();
 
-    let candidates = build_candidate_pool(pool, user_id, &active_heroes).await?;
+    let trial_ids = fight_group
+        .trial_hero_list
+        .iter()
+        .filter_map(|trial| trial.trial_id)
+        .collect::<Vec<_>>();
+    let candidates = build_candidate_pool(pool, user_id, &active_heroes, &trial_ids).await?;
     let deck = draw_cards_with_merge(candidates, max_cards);
 
     Ok(deck)
@@ -38,7 +63,16 @@ pub async fn generate_initial_deck(
     fight_group: &FightGroup,
     act_point: i32,
 ) -> Result<CardInfoPush, AppError> {
-    let hero_count = fight_group.hero_list.iter().filter(|&&u| u != 0).count();
+    let hero_count = fight_group.hero_list.iter().filter(|&&u| u > 0).count()
+        + if fight_group.trial_hero_list.is_empty() {
+            fight_group.hero_list.iter().filter(|&&u| u < 0).count()
+        } else {
+            fight_group
+                .trial_hero_list
+                .iter()
+                .filter(|trial| trial.trial_id.is_some())
+                .count()
+        };
     let max_cards = compute_max_cards(hero_count);
 
     let deck = generate_card_deck(pool, user_id, fight_group, max_cards).await?;
@@ -150,25 +184,11 @@ fn compute_max_cards(hero_count: usize) -> usize {
     (hero_count * 3).min(9)
 }
 
-static TRIAL_UID_MAP: Lazy<HashMap<i64, i32>> = Lazy::new(|| {
-    let game_data = configs::get();
-    let mut map = HashMap::new();
-
-    let trial_heroes: Vec<_> = game_data.hero_trial.iter().collect();
-
-    for (index, trial) in trial_heroes.iter().enumerate() {
-        let uid = -((index + 1) as i64); // -1, -2, -3, ...
-        map.insert(uid, trial.id);
-        tracing::debug!("Trial mapping: UID {} -> trial_id {}", uid, trial.id);
-    }
-
-    map
-});
-
 async fn build_candidate_pool(
     pool: &SqlitePool,
     user_id: i64,
     hero_uids: &[i64],
+    trial_ids: &[i32],
 ) -> Result<Vec<CardInfo>, AppError> {
     let mut pool_cards = Vec::new();
     let game_data = configs::get();
@@ -182,15 +202,23 @@ async fn build_candidate_pool(
 
         let hero_id = if hero_uid < 0 {
             // === TRIAL HERO PATH - NO DATABASE ACCESS ===
-            let trial_id = TRIAL_UID_MAP.get(&hero_uid).ok_or_else(|| {
-                tracing::error!("Unknown trial hero UID: {}", hero_uid);
-                AppError::InvalidRequest
-            })?;
+            let trial_index = hero_uid
+                .checked_neg()
+                .and_then(|uid| usize::try_from(uid - 1).ok())
+                .ok_or(AppError::InvalidRequest)?;
+            let trial_id = trial_ids
+                .get(trial_index)
+                .copied()
+                .or_else(|| game_data.hero_trial.iter().nth(trial_index).map(|trial| trial.id))
+                .ok_or_else(|| {
+                    tracing::error!("Unknown trial hero ordinal UID: {}", hero_uid);
+                    AppError::InvalidRequest
+                })?;
 
             let trial_data = game_data
                 .hero_trial
                 .iter()
-                .find(|t| t.id == *trial_id)
+                .find(|t| t.id == trial_id)
                 .ok_or_else(|| {
                     tracing::error!("Trial data not found for ID {}", trial_id);
                     AppError::InvalidRequest

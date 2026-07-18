@@ -1,13 +1,13 @@
 use super::BattleContext;
 use super::entity_builder;
+use super::destiny::{DestinyState, HeroBuildContext, HeroSource};
 use anyhow::Result;
 
 use database::models::game::heros::{HeroModel, UserHeroModel};
 
-use once_cell::sync::Lazy;
-use sonettobuf::{Fight, FightTeam};
+use sonettobuf::{EquipRecord, Fight, FightEntityInfo, FightTeam, HeroAttribute};
 use sqlx::SqlitePool;
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 pub async fn build_fight(
     pool: &SqlitePool,
@@ -43,22 +43,7 @@ pub async fn build_fight(
     })
 }
 
-static TRIAL_UID_MAP: Lazy<HashMap<i64, i32>> = Lazy::new(|| {
-    let game_data = config::configs::get();
-    let mut map = HashMap::new();
-
-    let trial_heroes: Vec<_> = game_data.hero_trial.iter().collect();
-
-    for (index, trial) in trial_heroes.iter().enumerate() {
-        let uid = -((index + 1) as i64); // -1, -2, -3, ...
-        map.insert(uid, trial.id);
-        tracing::debug!("Trial mapping: UID {} -> trial_id {}", uid, trial.id);
-    }
-
-    map
-});
-
-async fn build_attacker_team(
+pub async fn build_attacker_team(
     pool: &SqlitePool,
     user_id: i64,
     fight_group: &sonettobuf::FightGroup,
@@ -69,24 +54,65 @@ async fn build_attacker_team(
 
     // Main heroes
     for (position, hero_uid) in fight_group.hero_list.iter().enumerate() {
-        if *hero_uid == 0 {
+        if *hero_uid <= 0 {
             continue;
         }
         let hero_data = hero.get_uid(*hero_uid as i32).await?;
         let entity =
             entity_builder::build_hero_entity(pool, &hero_data, (position + 1) as i32, 1, false)
-                .await;
+                .await?;
         entitys.push(entity);
     }
 
     // Sub heroes
     for hero_uid in fight_group.sub_hero_list.iter() {
-        if *hero_uid == 0 {
+        if *hero_uid <= 0 {
             continue;
         }
         let hero_data = hero.get_uid(*hero_uid as i32).await?;
-        let entity = entity_builder::build_hero_entity(pool, &hero_data, -1, 1, true).await;
+        let entity = entity_builder::build_hero_entity(pool, &hero_data, -1, 1, true).await?;
         sub_entitys.push(entity);
+    }
+
+    // Trial heroes carry their explicit trial_id and position in the fight
+    // group. Negative hero-list UIDs are legacy wire conventions and are
+    // ignored above so a trial is constructed exactly once here.
+    let mut trial_ids = HashSet::new();
+    let mut trial_positions = HashSet::new();
+    for (index, trial) in fight_group.trial_hero_list.iter().enumerate() {
+        let Some(trial_id) = trial.trial_id else {
+            return Err(anyhow::anyhow!("trial hero at index {index} is missing trial_id"));
+        };
+        if !trial_ids.insert(trial_id) {
+            return Err(anyhow::anyhow!("duplicate trial_id {trial_id}"));
+        }
+        let position = trial.pos.unwrap_or((entitys.len() + 1) as i32);
+        if !trial_positions.insert(position) {
+            return Err(anyhow::anyhow!("duplicate trial position {position}"));
+        }
+        let uid = -((index + 1) as i64);
+        entitys.push(build_trial_hero_entity(uid, trial_id, position, 1)?);
+    }
+
+    if fight_group.trial_hero_list.is_empty() {
+        let game_data = config::configs::get();
+        for (index, hero_uid) in fight_group
+            .hero_list
+            .iter()
+            .copied()
+            .filter(|uid| *uid < 0)
+            .enumerate()
+        {
+            let trial_index = hero_uid
+                .checked_neg()
+                .and_then(|uid| usize::try_from(uid - 1).ok())
+                .unwrap_or(index);
+            let Some(trial) = game_data.hero_trial.iter().nth(trial_index) else {
+                return Err(anyhow::anyhow!("unknown legacy trial hero UID {hero_uid}"));
+            };
+            let position = (entitys.len() + 1) as i32;
+            entitys.push(build_trial_hero_entity(hero_uid, trial.id, position, 1)?);
+        }
     }
 
     let player_entity = entity_builder::build_player_entity(user_id, 1);
@@ -101,25 +127,18 @@ async fn build_attacker_team(
     ))
 }
 
-#[allow(dead_code)]
 fn build_trial_hero_entity(
     hero_uid: i64,
+    trial_id: i32,
     position: i32,
     team_type: i32,
-) -> Result<sonettobuf::FightEntityInfo> {
+) -> Result<FightEntityInfo> {
     use config::configs;
-    use sonettobuf::{EquipRecord, FightEntityInfo, HeroAttribute};
 
     let game_data = configs::get();
-
-    // Look up trial hero using the map
-    let trial_id = TRIAL_UID_MAP
-        .get(&hero_uid)
-        .ok_or_else(|| anyhow::anyhow!("Unknown trial hero UID: {}", hero_uid))?;
-
     let trial_data = game_data
         .hero_trial
-        .get(*trial_id)
+        .get(trial_id)
         .ok_or_else(|| anyhow::anyhow!("Trial data not found for ID {}", trial_id))?;
 
     tracing::info!(
@@ -184,15 +203,30 @@ fn build_trial_hero_entity(
         )
     };
 
-    // Parse skills from hero config
-    let skill_group1 = parse_skill_group(&hero_config.skill, 1);
-    let skill_group2 = parse_skill_group(&hero_config.skill, 2);
-
-    // Passive skills - empty for trial heroes
-    let passive_skill: Vec<i32> = vec![];
-
-    // Get ex skill from hero config
-    let ex_skill = hero_config.ex_skill;
+    let context = HeroBuildContext {
+        hero_id: trial_data.hero_id,
+        skin: trial_data.skin,
+        rank: hero_config.rank,
+        ex_skill_level: trial_data.ex_skill_lv,
+        destiny: DestinyState {
+            rank: trial_data.facetslevel,
+            // Trial attributes are configured by HeroTrial; do not invent a
+            // Destiny node level for the trial path.
+            level: 0,
+            facet_id: trial_data.facets_id,
+        },
+        is_substitute: false,
+        hero_type: hero_config.hero_type,
+        source: HeroSource::Trial,
+    };
+    let kit = entity_builder::resolve_entity_kit(&context).map_err(|error| {
+        anyhow::anyhow!(
+            "failed to resolve trial {} hero {} kit: {}",
+            trial_id,
+            trial_data.hero_id,
+            error
+        )
+    })?;
 
     Ok(FightEntityInfo {
         uid: Some(hero_uid),
@@ -214,10 +248,10 @@ fn build_trial_hero_entity(
             multi_hp_num: Some(0),
         }),
         buffs: vec![],
-        skill_group1,
-        skill_group2,
-        passive_skill,
-        ex_skill: Some(ex_skill),
+        skill_group1: kit.skill_group_1,
+        skill_group2: kit.skill_group_2,
+        passive_skill: kit.passives,
+        ex_skill: Some(kit.ultimate),
         shield_value: Some(0),
         no_effect_buffs: vec![],
         expoint_max_add: Some(0),
@@ -230,7 +264,7 @@ fn build_trial_hero_entity(
             refine_lv: Some(trial_data.equip_refine),
         }),
         ex_skill_level: Some(trial_data.ex_skill_lv),
-        power_infos: vec![],
+        power_infos: kit.power_infos,
         act104_equip_uids: vec![],
         trial_act104_equips: vec![],
         summoned_list: vec![],
@@ -257,28 +291,10 @@ fn build_trial_hero_entity(
         sub_cd: Some(0),
         ex_point_type: Some(0),
         equips: vec![],
-        destiny_stone: Some(0),
-        destiny_rank: Some(0),
+        destiny_stone: Some(trial_data.facets_id),
+        destiny_rank: Some(trial_data.facetslevel),
         custom_unit_id: Some(0),
     })
-}
-
-// Helper function to parse skill groups
-fn parse_skill_group(skill_str: &str, target_group: i32) -> Vec<i32> {
-    // Parse: "1#31240111#31240112#31240113|2#31240121#31240122#31240123"
-    for group_str in skill_str.split('|') {
-        let parts: Vec<&str> = group_str.split('#').collect();
-        if let Some(first) = parts.first()
-            && let Ok(group_num) = first.parse::<i32>()
-            && group_num == target_group
-        {
-            return parts[1..]
-                .iter()
-                .filter_map(|s| s.parse::<i32>().ok())
-                .collect();
-        }
-    }
-    vec![]
 }
 
 pub struct BattleSetup {
