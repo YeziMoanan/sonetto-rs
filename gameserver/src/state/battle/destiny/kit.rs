@@ -82,11 +82,16 @@ pub fn resolve_hero_kit(
         })
         .unwrap_or((&character.skill, character.ex_skill, context.hero_type, None));
 
+    let base_passives = match context.source {
+        super::types::HeroSource::Activity => activity_base_passives(game, context)?,
+        _ => base_passives(game, context.hero_id),
+    };
+
     let mut resolved = ResolvedHeroKit {
         skill_group_1: parse_character_skill_group(skill, 1, effective_hero_type)?,
         skill_group_2: parse_character_skill_group(skill, 2, effective_hero_type)?,
         ultimate,
-        passives: base_passives(game, context.hero_id),
+        passives: base_passives,
         power_infos: Vec::new(),
         trace: Vec::new(),
     };
@@ -348,6 +353,39 @@ fn base_passives(game: &GameDB, hero_id: i32) -> Vec<i32> {
         }
     });
     rows.into_iter().map(|row| row.skill_passive).collect()
+}
+
+fn activity_base_passives(
+    game: &GameDB,
+    context: &HeroBuildContext,
+) -> Result<Vec<i32>, DestinyResolveError> {
+    let Some(role) = game
+        .activity174_role
+        .iter()
+        .find(|role| role.hero_id == context.hero_id && role.skin_id == context.skin)
+    else {
+        return Ok(base_passives(game, context.hero_id));
+    };
+
+    if role.passive_skill.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut passives = Vec::new();
+    for value in role.passive_skill.split('|') {
+        let Ok(passive_id) = value.parse::<i32>() else {
+            tracing::warn!(
+                hero_id = role.hero_id,
+                role_id = role.id,
+                passive_skill = %role.passive_skill,
+                invalid_segment = value,
+                "activity passive list stopped at a non-numeric client segment"
+            );
+            break;
+        };
+        passives.push(passive_id);
+    }
+    Ok(passives)
 }
 
 fn parse_character_skill_group(

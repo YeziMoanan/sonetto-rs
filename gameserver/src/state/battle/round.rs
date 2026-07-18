@@ -3,6 +3,8 @@ use sonettobuf::{ActEffect, CardInfo, Fight, FightEntityInfo};
 use std::collections::HashMap;
 
 use crate::state::battle::manager::buff_mgr::BuffMgr;
+use crate::state::battle::destiny::DestinyModifierMap;
+use crate::state::battle::manager::calculate_mgr::hero_sp_attribute_from_destiny;
 
 #[allow(dead_code)]
 pub struct RoundState {
@@ -17,11 +19,19 @@ pub struct RoundState {
     pub move_num: i32,
     pub is_finish: bool,
     pub pending_effects: Vec<ActEffect>,
+    pub destiny_modifiers: DestinyModifierMap,
 }
 
 #[allow(dead_code)]
 impl RoundState {
     pub fn new(fight: &Fight) -> Result<Self> {
+        Self::new_with_destiny_modifiers(fight, DestinyModifierMap::new())
+    }
+
+    pub fn new_with_destiny_modifiers(
+        fight: &Fight,
+        destiny_modifiers: DestinyModifierMap,
+    ) -> Result<Self> {
         let mut entities = HashMap::new();
 
         if let Some(attacker) = &fight.attacker {
@@ -50,8 +60,9 @@ impl RoundState {
             used_cards: vec![],
             round_num: fight.cur_round.unwrap_or(1),
             move_num: 0,
-            is_finish: false,
+            is_finish: fight.is_finish.unwrap_or(false),
             pending_effects: vec![],
+            destiny_modifiers,
         })
     }
 
@@ -97,40 +108,11 @@ impl RoundState {
 
     fn build_sp_attributes(&self) -> Vec<sonettobuf::FightHeroSpAttributeInfo> {
         self.iter_entities()
-            .filter(|e| e.uid.unwrap_or(0) < 0)
             .map(|e| sonettobuf::FightHeroSpAttributeInfo {
                 uid: e.uid,
-                attribute: Some(sonettobuf::HeroSpAttribute {
-                    revive: Some(0),
-                    heal: Some(0),
-                    absorb: Some(0),
-                    defense_ignore: Some(0),
-                    clutch: Some(0),
-                    final_add_dmg: Some(0),
-                    final_drop_dmg: Some(0),
-                    normal_skill_rate: Some(0),
-                    play_add_rate: Some(0),
-                    play_drop_rate: Some(0),
-                    dizzy_resistances: Some(0),
-                    sleep_resistances: Some(0),
-                    petrified_resistances: Some(0),
-                    frozen_resistances: Some(0),
-                    disarm_resistances: Some(0),
-                    forbid_resistances: Some(0),
-                    seal_resistances: Some(0),
-                    cant_get_exskill_resistances: Some(0),
-                    del_ex_point_resistances: Some(0),
-                    stress_up_resistances: Some(0),
-                    control_resilience: Some(0),
-                    del_ex_point_resilience: Some(0),
-                    stress_up_resilience: Some(0),
-                    charm_resistances: Some(0),
-                    rebound_dmg: Some(0),
-                    extra_dmg: Some(0),
-                    reuse_dmg: Some(0),
-                    big_skill_rate: Some(0),
-                    clutch_dmg: Some(0),
-                }),
+                attribute: Some(hero_sp_attribute_from_destiny(
+                    e.uid.and_then(|uid| self.destiny_modifiers.get(&uid)),
+                )),
             })
             .collect()
     }

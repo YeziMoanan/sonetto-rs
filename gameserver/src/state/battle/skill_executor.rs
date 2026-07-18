@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
 
 use crate::state::battle::manager::buff_mgr::BuffMgr;
+use crate::state::battle::destiny::{DestinyModifierMap, ResolvedDestinyAttributes};
 
 use super::utils::VfxConfig;
 
@@ -15,11 +16,24 @@ static BUFF_UID_COUNTER: AtomicI64 = AtomicI64::new(1000);
 
 pub struct SkillExecutor {
     entities: HashMap<i64, FightEntityInfo>,
+    destiny_modifiers: DestinyModifierMap,
 }
 
 impl SkillExecutor {
-    pub fn new(entities: HashMap<i64, FightEntityInfo>) -> Self {
-        Self { entities }
+    pub fn new(
+        entities: HashMap<i64, FightEntityInfo>,
+        destiny_modifiers: DestinyModifierMap,
+    ) -> Self {
+        Self {
+            entities,
+            destiny_modifiers,
+        }
+    }
+
+    /// Exposes the immutable combat sidecar at the calculation boundary.
+    /// Damage consumers must still select a formula-backed rate explicitly.
+    pub fn modifier_for_uid(&self, uid: i64) -> Option<&ResolvedDestinyAttributes> {
+        self.destiny_modifiers.get(&uid)
     }
 
     pub fn execute_skill(

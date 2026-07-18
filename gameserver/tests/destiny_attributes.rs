@@ -136,6 +136,9 @@ fn retains_all_special_combat_attributes() {
     .unwrap();
 
     assert_eq!(resolved.raw_tenths.get(&217), Some(&75));
+    assert_eq!(resolved.real_hurt_rate, 75);
+    assert_eq!(resolved.poison_add_rate, 0);
+    assert_eq!(resolved.sp_attr.clutch, Some(0));
     assert!(resolved.raw_tenths.contains_key(&601));
     assert!(resolved.raw_tenths.contains_key(&604));
 }

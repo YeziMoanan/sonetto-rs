@@ -7,6 +7,7 @@ use sonettobuf::{
 use std::sync::Arc;
 
 use crate::state::battle::{
+    destiny::DestinyModifierMap,
     manager::{buff_mgr::BuffMgr, calculate_mgr::FightCalculateDataMgr, card_mgr::FightCardMgr},
     mechanics::bloodtithe::BloodtitheState,
     round::{RoundSnapshot, RoundState},
@@ -15,11 +16,22 @@ use crate::state::battle::{
 #[derive(Default, Debug, Clone)]
 pub struct FightRoundMgr {
     fight: Arc<Fight>,
+    destiny_modifiers: Arc<DestinyModifierMap>,
 }
 
 impl FightRoundMgr {
     pub fn new(fight: Arc<Fight>) -> Self {
-        Self { fight }
+        Self::new_with_destiny_modifiers(fight, Arc::new(DestinyModifierMap::new()))
+    }
+
+    pub fn new_with_destiny_modifiers(
+        fight: Arc<Fight>,
+        destiny_modifiers: Arc<DestinyModifierMap>,
+    ) -> Self {
+        Self {
+            fight,
+            destiny_modifiers,
+        }
     }
 
     pub fn update_fight(&mut self, fight: Arc<Fight>) {
@@ -38,8 +50,11 @@ impl FightRoundMgr {
         ai_deck: Vec<CardInfo>,
         buff_mgr: &mut BuffMgr,
     ) -> Result<FightRound> {
-        let (steps, round_snapshot) = {
-            let mut state = RoundState::new(&*fight)?;
+        let (mut steps, mut round_snapshot) = {
+            let mut state = RoundState::new_with_destiny_modifiers(
+                &*fight,
+                (*self.destiny_modifiers).clone(),
+            )?;
 
             state.player_deck = current_deck.clone();
             state.ai_cards = ai_deck.clone();
@@ -66,21 +81,32 @@ impl FightRoundMgr {
             (steps, state.export_snapshot())
         };
 
-        calc.play_step_data_list(&steps, fight, bloodtithe, buff_mgr)
+        calc.play_step_data_list(&mut steps, fight, bloodtithe, buff_mgr)
             .map_err(anyhow::Error::msg)?;
+        // Effects are applied to the authoritative Fight after card/AI steps
+        // are generated. Rebuild state-derived fields now so power/current HP
+        // in the response cannot lag one round behind the server state.
+        round_snapshot.ex_point_info = calc.build_ex_point_info(fight);
+        round_snapshot.hero_sp_attributes = calc.build_hero_sp_attributes(fight);
+        let authoritative_state = RoundState::new_with_destiny_modifiers(
+            &*fight,
+            (*self.destiny_modifiers).clone(),
+        )?;
+        round_snapshot.is_finish = self.check_battle_end(&authoritative_state);
+        fight.is_finish = Some(round_snapshot.is_finish);
         calc.on_round_end();
 
         Ok(self.build_round_response(steps, round_snapshot, current_deck))
     }
 
-    fn check_battle_end(&self, state: &RoundState) -> bool {
+    pub fn check_battle_end(&self, state: &RoundState) -> bool {
         let enemies_alive = state
             .iter_entities()
-            .any(|e| e.uid.unwrap_or(0) < 0 && e.current_hp.unwrap_or(0) > 0);
+            .any(|e| e.team_type == Some(2) && e.current_hp.unwrap_or(0) > 0);
 
         let heroes_alive = state
             .iter_entities()
-            .any(|e| e.uid.unwrap_or(0) > 0 && e.current_hp.unwrap_or(0) > 0);
+            .any(|e| e.team_type == Some(1) && e.current_hp.unwrap_or(0) > 0);
 
         !enemies_alive || !heroes_alive
     }

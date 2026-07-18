@@ -6,9 +6,9 @@ use database::{
 use anyhow::Result;
 use super::destiny::{
     DestinyResolveError, DestinyState, HeroBaseAttributes, HeroBuildContext, HeroSource,
-    ResolvedHeroKit, resolve_destiny_attributes, resolve_hero_kit,
+    ResolvedDestinyAttributes, ResolvedHeroKit, resolve_destiny_attributes, resolve_hero_kit,
 };
-use sonettobuf::{EquipRecord, FightEntityInfo, HeroAttribute};
+use sonettobuf::{EquipRecord, FightEntityInfo, HeroAttribute, HeroExAttribute, HeroSpAttribute};
 use sqlx::SqlitePool;
 
 /// Resolve the complete combat kit for every hero source. This is the only
@@ -19,28 +19,65 @@ pub fn resolve_entity_kit(
     let game = configs::get();
     let index = config::destiny::DestinyConfigIndex::try_from_game_db(game)
         .map_err(|error| DestinyResolveError::InvalidConfig(error.to_string()))?;
+    validate_ex_skill_level(game, context)?;
 
-    match resolve_hero_kit(&index, game, context) {
-        Ok(mut kit) => {
-            apply_compatibility_passives(context, &mut kit);
-            Ok(kit)
-        }
-        Err(error) if context.destiny.facet_id > 0 && context.destiny.rank > 0 => {
-            tracing::warn!(
-                hero_id = context.hero_id,
-                facet_id = context.destiny.facet_id,
-                rank = context.destiny.rank,
-                error = %error,
-                "inactive invalid Destiny facet; preserving legacy hero construction"
-            );
-            let mut inactive = context.clone();
-            inactive.destiny = DestinyState::default();
-            let mut kit = resolve_hero_kit(&index, game, &inactive)?;
-            apply_compatibility_passives(&inactive, &mut kit);
-            Ok(kit)
-        }
-        Err(error) => Err(error),
+    let (effective_context, facet_active) = effective_destiny_context(&index, context);
+    if context.destiny.facet_id > 0 && context.destiny.rank > 0 && !facet_active {
+        tracing::warn!(
+            hero_id = context.hero_id,
+            facet_id = context.destiny.facet_id,
+            rank = context.destiny.rank,
+            "inactive invalid Destiny facet; preserving legacy hero construction"
+        );
     }
+
+    let mut kit = resolve_hero_kit(&index, game, &effective_context)?;
+    apply_compatibility_passives(context, facet_active, &mut kit);
+    Ok(kit)
+}
+
+fn effective_destiny_context(
+    index: &config::destiny::DestinyConfigIndex,
+    context: &HeroBuildContext,
+) -> (HeroBuildContext, bool) {
+    let facet_id = context.destiny.facet_id;
+    let facet_rank = context.destiny.rank;
+    let facet_requested = facet_id > 0 && facet_rank > 0;
+    let facet_owned = index
+        .hero(context.hero_id)
+        .is_some_and(|hero| hero.facet_ids.contains(&facet_id));
+    let facet_rank_exists = index.facet(facet_id, facet_rank).is_some();
+    let facet_active = facet_requested && facet_owned && facet_rank_exists;
+
+    let mut effective_context = context.clone();
+    if facet_requested && !facet_active {
+        effective_context.destiny = DestinyState::default();
+    }
+    (effective_context, facet_active)
+}
+
+fn validate_ex_skill_level(
+    game: &config::GameDB,
+    context: &HeroBuildContext,
+) -> Result<(), DestinyResolveError> {
+    if context.ex_skill_level == 0 {
+        return Ok(());
+    }
+
+    let max_level = game
+        .skill_ex_level
+        .iter()
+        .filter(|row| row.hero_id == context.hero_id)
+        .map(|row| row.skill_level)
+        .max()
+        .unwrap_or(0);
+    if context.ex_skill_level > max_level {
+        return Err(DestinyResolveError::InvalidState(format!(
+            "ex skill level {} exceeds configured maximum {} for hero {}",
+            context.ex_skill_level, max_level, context.hero_id
+        )));
+    }
+    Ok(())
 }
 
 fn hero_build_context(
@@ -67,11 +104,11 @@ fn hero_build_context(
     }
 }
 
-fn apply_compatibility_passives(context: &HeroBuildContext, kit: &mut ResolvedHeroKit) {
-    let destiny_facet_active = kit
-        .trace
-        .iter()
-        .any(|entry| entry.detail.contains("active at rank"));
+fn apply_compatibility_passives(
+    context: &HeroBuildContext,
+    destiny_facet_active: bool,
+    kit: &mut ResolvedHeroKit,
+) {
     if context.hero_id == 3088 && destiny_facet_active {
         if let Some(passive) = kit
             .passives
@@ -121,8 +158,7 @@ pub async fn build_hero_entity(
 
     let equip_id = equip_data.as_ref().map(|equip| equip.equip_id);
     let game = configs::get();
-    let source = activity_source_for_hero(record.hero_id, record.skin);
-    let context = hero_build_context(hero_data, is_sub, source);
+    let context = hero_build_context(hero_data, is_sub, HeroSource::Owned);
     let mut kit = resolve_entity_kit(&context)?;
     append_equipment_passives(game, equip_id, &mut kit.passives);
 
@@ -195,16 +231,98 @@ pub async fn build_hero_entity(
     })
 }
 
-fn activity_source_for_hero(hero_id: i32, skin: i32) -> HeroSource {
+pub fn resolve_entity_destiny_attributes(
+    context: &HeroBuildContext,
+    base: HeroBaseAttributes,
+) -> Result<ResolvedDestinyAttributes, DestinyResolveError> {
     let game = configs::get();
-    if game
-        .activity174_role
-        .iter()
-        .any(|role| role.hero_id == hero_id && role.skin_id == skin)
-    {
-        HeroSource::Activity
-    } else {
-        HeroSource::Owned
+    let index = config::destiny::DestinyConfigIndex::try_from_game_db(game)
+        .map_err(|error| DestinyResolveError::InvalidConfig(error.to_string()))?;
+    validate_ex_skill_level(game, context)?;
+    let (effective_context, _) = effective_destiny_context(&index, context);
+    resolve_destiny_attributes(&index, effective_context.hero_id, effective_context.destiny, base)
+}
+
+pub fn resolve_hero_destiny_attributes(
+    hero_data: &HeroData,
+    is_substitute: bool,
+) -> Result<ResolvedDestinyAttributes, DestinyResolveError> {
+    let context = hero_build_context(hero_data, is_substitute, HeroSource::Owned);
+    resolve_entity_destiny_attributes(&context, base_hero_attributes(hero_data))
+}
+
+pub(crate) fn merge_hero_combat_attributes(
+    mut resolved: ResolvedDestinyAttributes,
+    hero_data: &HeroData,
+) -> ResolvedDestinyAttributes {
+    let record = &hero_data.record;
+    resolved.ex_attr = add_ex_attributes(
+        HeroExAttribute {
+            cri: Some(record.ex_cri),
+            recri: Some(record.ex_recri),
+            cri_dmg: Some(record.ex_cri_dmg),
+            cri_def: Some(record.ex_cri_def),
+            add_dmg: Some(record.ex_add_dmg),
+            drop_dmg: Some(record.ex_drop_dmg),
+        },
+        resolved.ex_attr,
+    );
+    let base_sp = hero_data
+        .sp_attr
+        .clone()
+        .map(Into::into)
+        .unwrap_or_default();
+    resolved.sp_attr = add_sp_attributes(base_sp, resolved.sp_attr);
+    resolved
+}
+
+fn add_ex_attributes(base: HeroExAttribute, delta: HeroExAttribute) -> HeroExAttribute {
+    HeroExAttribute {
+        cri: Some(base.cri.unwrap_or(0) + delta.cri.unwrap_or(0)),
+        recri: Some(base.recri.unwrap_or(0) + delta.recri.unwrap_or(0)),
+        cri_dmg: Some(base.cri_dmg.unwrap_or(0) + delta.cri_dmg.unwrap_or(0)),
+        cri_def: Some(base.cri_def.unwrap_or(0) + delta.cri_def.unwrap_or(0)),
+        add_dmg: Some(base.add_dmg.unwrap_or(0) + delta.add_dmg.unwrap_or(0)),
+        drop_dmg: Some(base.drop_dmg.unwrap_or(0) + delta.drop_dmg.unwrap_or(0)),
+    }
+}
+
+fn add_sp_attributes(base: HeroSpAttribute, delta: HeroSpAttribute) -> HeroSpAttribute {
+    macro_rules! add {
+        ($field:ident) => {
+            Some(base.$field.unwrap_or(0) + delta.$field.unwrap_or(0))
+        };
+    }
+    HeroSpAttribute {
+        revive: add!(revive),
+        heal: add!(heal),
+        absorb: add!(absorb),
+        defense_ignore: add!(defense_ignore),
+        clutch: add!(clutch),
+        final_add_dmg: add!(final_add_dmg),
+        final_drop_dmg: add!(final_drop_dmg),
+        normal_skill_rate: add!(normal_skill_rate),
+        play_add_rate: add!(play_add_rate),
+        play_drop_rate: add!(play_drop_rate),
+        dizzy_resistances: add!(dizzy_resistances),
+        sleep_resistances: add!(sleep_resistances),
+        petrified_resistances: add!(petrified_resistances),
+        frozen_resistances: add!(frozen_resistances),
+        disarm_resistances: add!(disarm_resistances),
+        forbid_resistances: add!(forbid_resistances),
+        seal_resistances: add!(seal_resistances),
+        cant_get_exskill_resistances: add!(cant_get_exskill_resistances),
+        del_ex_point_resistances: add!(del_ex_point_resistances),
+        stress_up_resistances: add!(stress_up_resistances),
+        control_resilience: add!(control_resilience),
+        del_ex_point_resilience: add!(del_ex_point_resilience),
+        stress_up_resilience: add!(stress_up_resilience),
+        charm_resistances: add!(charm_resistances),
+        rebound_dmg: add!(rebound_dmg),
+        extra_dmg: add!(extra_dmg),
+        reuse_dmg: add!(reuse_dmg),
+        big_skill_rate: add!(big_skill_rate),
+        clutch_dmg: add!(clutch_dmg),
     }
 }
 
@@ -213,18 +331,10 @@ fn apply_destiny_entity_attributes(
     attr: &mut HeroAttribute,
     base: HeroBaseAttributes,
 ) {
-    if matches!(context.source, HeroSource::Trial)
-        || context.destiny.rank == 0
-        || context.destiny.level == 0
-    {
+    if context.destiny.rank == 0 || context.destiny.level == 0 {
         return;
     }
-    let game = configs::get();
-    let Ok(index) = config::destiny::DestinyConfigIndex::try_from_game_db(game) else {
-        tracing::warn!(hero_id = context.hero_id, "Destiny index unavailable for entity attributes");
-        return;
-    };
-    match resolve_destiny_attributes(&index, context.hero_id, context.destiny, base) {
+    match resolve_entity_destiny_attributes(context, base) {
         Ok(resolved) => {
             attr.hp = Some(attr.hp.unwrap_or(0).saturating_add(resolved.hp));
             attr.attack = Some(attr.attack.unwrap_or(0).saturating_add(resolved.attack));

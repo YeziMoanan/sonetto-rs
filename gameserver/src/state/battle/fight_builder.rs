@@ -1,6 +1,9 @@
 use super::BattleContext;
 use super::entity_builder;
-use super::destiny::{DestinyState, HeroBuildContext, HeroSource};
+use super::destiny::{
+    DestinyModifierMap, DestinyState, HeroBaseAttributes, HeroBuildContext, HeroSource,
+    ResolvedDestinyAttributes,
+};
 use anyhow::Result;
 
 use database::models::game::heros::{HeroModel, UserHeroModel};
@@ -14,13 +17,22 @@ pub async fn build_fight(
     ctx: &BattleContext,
     fight_group: &sonettobuf::FightGroup,
 ) -> Result<Fight> {
+    Ok(build_fight_with_destiny_modifiers(pool, ctx, fight_group).await?.0)
+}
+
+pub async fn build_fight_with_destiny_modifiers(
+    pool: &SqlitePool,
+    ctx: &BattleContext,
+    fight_group: &sonettobuf::FightGroup,
+) -> Result<(Fight, DestinyModifierMap)> {
     // Build attacker team (player)
-    let attacker = build_attacker_team(pool, ctx.player_id, fight_group).await?;
+    let (attacker, modifiers) =
+        build_attacker_team_with_destiny_modifiers(pool, ctx.player_id, fight_group).await?;
 
     // Build defender team (enemies from episode config)
     let defender = build_defender_team(ctx.episode_id).await?;
 
-    Ok(Fight {
+    let fight = Fight {
         attacker: Some(attacker),
         defender: Some(defender.team),
         cur_round: Some(1),
@@ -40,7 +52,8 @@ pub async fn build_fight(
         custom_data: vec![],
         fight_task_box: Some(sonettobuf::FightTaskBox { tasks: vec![] }),
         progress_list: vec![],
-    })
+    };
+    Ok((fight, modifiers))
 }
 
 pub async fn build_attacker_team(
@@ -48,8 +61,28 @@ pub async fn build_attacker_team(
     user_id: i64,
     fight_group: &sonettobuf::FightGroup,
 ) -> Result<FightTeam> {
+    Ok(build_attacker_team_with_destiny_modifiers(pool, user_id, fight_group)
+        .await?
+        .0)
+}
+
+pub async fn build_attacker_team_with_destiny_modifiers(
+    pool: &SqlitePool,
+    user_id: i64,
+    fight_group: &sonettobuf::FightGroup,
+) -> Result<(FightTeam, DestinyModifierMap)> {
     let mut entitys = Vec::new();
     let mut sub_entitys = Vec::new();
+    let mut modifiers = DestinyModifierMap::new();
+    let trial_uid_count = attacker_trial_uid_count(
+        &fight_group.hero_list,
+        fight_group.trial_hero_list.len(),
+    );
+    if trial_uid_count > MAX_ATTACKER_TRIAL_UID_ORDINAL {
+        return Err(anyhow::anyhow!(
+            "attacker trial UID ordinal {trial_uid_count} crosses the defender UID namespace"
+        ));
+    }
     let hero = UserHeroModel::new(user_id, pool.clone());
 
     // Main heroes
@@ -61,16 +94,23 @@ pub async fn build_attacker_team(
         let entity =
             entity_builder::build_hero_entity(pool, &hero_data, (position + 1) as i32, 1, false)
                 .await?;
+        collect_destiny_modifiers(&mut modifiers, entity.uid, &hero_data, false);
         entitys.push(entity);
     }
 
     // Sub heroes
-    for hero_uid in fight_group.sub_hero_list.iter() {
+    for (index, hero_uid) in fight_group.sub_hero_list.iter().enumerate() {
         if *hero_uid <= 0 {
             continue;
         }
+        let uid = try_attacker_substitute_uid(trial_uid_count, index)?;
         let hero_data = hero.get_uid(*hero_uid as i32).await?;
-        let entity = entity_builder::build_hero_entity(pool, &hero_data, -1, 1, true).await?;
+        let mut entity = entity_builder::build_hero_entity(pool, &hero_data, -1, 1, true).await?;
+        entity.uid = Some(uid);
+        if let Some(enhance_info) = entity.enhance_info_box.as_mut() {
+            enhance_info.uid = Some(uid);
+        }
+        collect_destiny_modifiers(&mut modifiers, entity.uid, &hero_data, true);
         sub_entitys.push(entity);
     }
 
@@ -91,7 +131,9 @@ pub async fn build_attacker_team(
             return Err(anyhow::anyhow!("duplicate trial position {position}"));
         }
         let uid = -((index + 1) as i64);
-        entitys.push(build_trial_hero_entity(uid, trial_id, position, 1)?);
+        let (entity, modifier) = build_trial_hero_entity(uid, trial_id, position, 1)?;
+        modifiers.insert(uid, modifier);
+        entitys.push(entity);
     }
 
     if fight_group.trial_hero_list.is_empty() {
@@ -111,20 +153,47 @@ pub async fn build_attacker_team(
                 return Err(anyhow::anyhow!("unknown legacy trial hero UID {hero_uid}"));
             };
             let position = (entitys.len() + 1) as i32;
-            entitys.push(build_trial_hero_entity(hero_uid, trial.id, position, 1)?);
+            let (entity, modifier) =
+                build_trial_hero_entity(hero_uid, trial.id, position, 1)?;
+            modifiers.insert(hero_uid, modifier);
+            entitys.push(entity);
         }
     }
 
     let player_entity = entity_builder::build_player_entity(user_id, 1);
 
-    Ok(build_fight_team(
+    let team = build_fight_team(
         entitys,
         sub_entitys,
         player_entity,
         Some(15),
         fight_group.cloth_id,
         build_player_skills(fight_group.cloth_id),
-    ))
+    );
+    Ok((team, modifiers))
+}
+
+fn collect_destiny_modifiers(
+    modifiers: &mut DestinyModifierMap,
+    uid: Option<i64>,
+    hero_data: &database::models::game::heros::HeroData,
+    is_substitute: bool,
+) {
+    let Some(uid) = uid else { return };
+    match entity_builder::resolve_hero_destiny_attributes(hero_data, is_substitute) {
+        Ok(resolved) => {
+            modifiers.insert(
+                uid,
+                entity_builder::merge_hero_combat_attributes(resolved, hero_data),
+            );
+        }
+        Err(error) => tracing::warn!(
+            uid,
+            hero_id = hero_data.record.hero_id,
+            error = %error,
+            "Destiny combat modifiers unavailable; preserving base battle behavior"
+        ),
+    }
 }
 
 fn build_trial_hero_entity(
@@ -132,7 +201,7 @@ fn build_trial_hero_entity(
     trial_id: i32,
     position: i32,
     team_type: i32,
-) -> Result<FightEntityInfo> {
+) -> Result<(FightEntityInfo, ResolvedDestinyAttributes)> {
     use config::configs;
 
     let game_data = configs::get();
@@ -203,6 +272,7 @@ fn build_trial_hero_entity(
         )
     };
 
+    let has_destiny = trial_data.facetslevel > 0 && trial_data.facets_id > 0;
     let context = HeroBuildContext {
         hero_id: trial_data.hero_id,
         skin: trial_data.skin,
@@ -210,9 +280,9 @@ fn build_trial_hero_entity(
         ex_skill_level: trial_data.ex_skill_lv,
         destiny: DestinyState {
             rank: trial_data.facetslevel,
-            // Trial attributes are configured by HeroTrial; do not invent a
-            // Destiny node level for the trial path.
-            level: 0,
+            // FightEntityMO refreshes trial Destiny with the configured rank
+            // and facet at battle node level one.
+            level: i32::from(has_destiny),
             facet_id: trial_data.facets_id,
         },
         is_substitute: false,
@@ -227,8 +297,33 @@ fn build_trial_hero_entity(
             error
         )
     })?;
+    let base = HeroBaseAttributes {
+        hp,
+        attack,
+        defense,
+        mdefense,
+    };
+    let modifier = entity_builder::resolve_entity_destiny_attributes(&context, base)
+        .map_err(|error| {
+            anyhow::anyhow!(
+                "failed to resolve trial {} hero {} attributes: {}",
+                trial_id,
+                trial_data.hero_id,
+                error
+            )
+        })?;
+    let attr = HeroAttribute {
+        hp: Some(hp.saturating_add(modifier.hp)),
+        attack: Some(attack.saturating_add(modifier.attack)),
+        defense: Some(defense.saturating_add(modifier.defense)),
+        mdefense: Some(mdefense.saturating_add(modifier.mdefense)),
+        technic: Some(technic),
+        multi_hp_idx: Some(0),
+        multi_hp_num: Some(0),
+    };
+    let current_hp = attr.hp;
 
-    Ok(FightEntityInfo {
+    let entity = FightEntityInfo {
         uid: Some(hero_uid),
         model_id: Some(trial_data.hero_id),
         skin: Some(trial_data.skin),
@@ -237,16 +332,8 @@ fn build_trial_hero_entity(
         user_id: Some(0),     // Trial heroes have no owner
         ex_point: Some(0),
         level: Some(trial_data.level),
-        current_hp: Some(hp),
-        attr: Some(HeroAttribute {
-            hp: Some(hp),
-            attack: Some(attack),
-            defense: Some(defense),
-            mdefense: Some(mdefense),
-            technic: Some(technic),
-            multi_hp_idx: Some(0),
-            multi_hp_num: Some(0),
-        }),
+        current_hp,
+        attr: Some(attr.clone()),
         buffs: vec![],
         skill_group1: kit.skill_group_1,
         skill_group2: kit.skill_group_2,
@@ -268,15 +355,7 @@ fn build_trial_hero_entity(
         act104_equip_uids: vec![],
         trial_act104_equips: vec![],
         summoned_list: vec![],
-        base_attr: Some(HeroAttribute {
-            hp: Some(hp),
-            attack: Some(attack),
-            defense: Some(defense),
-            mdefense: Some(mdefense),
-            technic: Some(technic),
-            multi_hp_idx: Some(0),
-            multi_hp_num: Some(0),
-        }),
+        base_attr: Some(attr),
         ex_skill_point_change: Some(0),
         team_type: Some(team_type),
         enhance_info_box: Some(sonettobuf::EnhanceInfoBox {
@@ -294,7 +373,8 @@ fn build_trial_hero_entity(
         destiny_stone: Some(trial_data.facets_id),
         destiny_rank: Some(trial_data.facetslevel),
         custom_unit_id: Some(0),
-    })
+    };
+    Ok((entity, modifier))
 }
 
 pub struct BattleSetup {
@@ -471,8 +551,7 @@ fn build_enemy_entity(
         .and_then(|s| s.parse::<i32>().ok())
         .unwrap_or(0);
 
-    // Negative UIDs for enemies (-1, -2, -3, etc)
-    let uid = -((idx + 1) as i64);
+    let uid = enemy_entity_uid(idx);
 
     tracing::debug!(
         "Enemy: monster_id={}, skill_template={}, uid={}, hp={}, skills1={:?}",
@@ -550,6 +629,56 @@ fn build_enemy_entity(
         destiny_rank: Some(0),
         custom_unit_id: Some(0),
     })
+}
+
+/// Keep defender UIDs distinct from attacker trial ordinals (-1, -2, ...).
+/// The existing AI deck wire convention starts defenders at -1001.
+pub fn enemy_entity_uid(index: usize) -> i64 {
+    -1001 - index as i64
+}
+
+const MAX_ATTACKER_TRIAL_UID_ORDINAL: usize = 1_000;
+
+/// Reserve `-1..=-trial_count` for trial heroes, then assign substitutes.
+pub fn attacker_substitute_uid(trial_count: usize, substitute_index: usize) -> i64 {
+    try_attacker_substitute_uid(trial_count, substitute_index)
+        .expect("attacker substitute UID crosses the defender namespace")
+}
+
+/// Allocate a substitute UID without entering the defender namespace.
+pub fn try_attacker_substitute_uid(
+    trial_count: usize,
+    substitute_index: usize,
+) -> Result<i64> {
+    let ordinal = trial_count
+        .checked_add(substitute_index)
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| anyhow::anyhow!("attacker substitute UID ordinal overflow"))?;
+    if ordinal > MAX_ATTACKER_TRIAL_UID_ORDINAL {
+        return Err(anyhow::anyhow!(
+            "attacker substitute UID ordinal {ordinal} crosses the defender UID namespace"
+        ));
+    }
+    Ok(-(ordinal as i64))
+}
+
+/// Return the number of negative UID ordinals reserved by attacker trials.
+///
+/// Explicit trial entries are normalized to `-1..=-N`. Legacy requests carry
+/// their ordinal directly in `hero_list`, so reserve the highest ordinal rather
+/// than merely counting entries; sparse inputs such as `[-2]` must not collide
+/// with the first substitute.
+pub fn attacker_trial_uid_count(hero_list: &[i64], explicit_trial_count: usize) -> usize {
+    if explicit_trial_count != 0 {
+        return explicit_trial_count;
+    }
+
+    hero_list
+        .iter()
+        .filter_map(|uid| uid.checked_neg())
+        .filter_map(|uid| usize::try_from(uid).ok())
+        .max()
+        .unwrap_or(0)
 }
 
 fn parse_monster_skill_group(active_skill: &str, target_group: i32) -> Vec<i32> {

@@ -1,4 +1,5 @@
 use crate::state::battle::manager::fight_data_mgr::FightDataMgr;
+use crate::state::battle::destiny::DestinyModifierMap;
 
 use anyhow::Result;
 use sonettobuf::{CardInfo, Fight, FightRound};
@@ -7,8 +8,9 @@ pub async fn build_initial_round(
     fight: Fight,
     player_deck: Vec<CardInfo>,
     ai_deck: Vec<CardInfo>,
+    destiny_modifiers: DestinyModifierMap,
 ) -> Result<(FightRound, Fight, FightDataMgr)> {
-    let mut fight_mgr = FightDataMgr::new(fight);
+    let mut fight_mgr = FightDataMgr::new_with_destiny_modifiers(fight, destiny_modifiers);
 
     let round = fight_mgr.build_initial_round(player_deck, ai_deck)?;
 

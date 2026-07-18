@@ -5,6 +5,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Copy)]
 pub struct EntityLocation {
     pub is_attacker: bool,
+    pub is_sub_entity: bool,
     pub index: usize,
 }
 
@@ -35,6 +36,19 @@ impl FightEntityDataMgr {
                         uid,
                         EntityLocation {
                             is_attacker: true,
+                            is_sub_entity: false,
+                            index: idx,
+                        },
+                    );
+                }
+            }
+            for (idx, entity) in attacker.sub_entitys.iter().enumerate() {
+                if let Some(uid) = entity.uid {
+                    self.entity_cache.insert(
+                        uid,
+                        EntityLocation {
+                            is_attacker: true,
+                            is_sub_entity: true,
                             index: idx,
                         },
                     );
@@ -49,6 +63,7 @@ impl FightEntityDataMgr {
                         uid,
                         EntityLocation {
                             is_attacker: false,
+                            is_sub_entity: false,
                             index: idx,
                         },
                     );
@@ -61,7 +76,12 @@ impl FightEntityDataMgr {
         let loc = self.entity_cache.get(&entity_id)?;
 
         if loc.is_attacker {
-            self.fight.attacker.as_ref()?.entitys.get(loc.index)
+            let attacker = self.fight.attacker.as_ref()?;
+            if loc.is_sub_entity {
+                attacker.sub_entitys.get(loc.index)
+            } else {
+                attacker.entitys.get(loc.index)
+            }
         } else {
             self.fight.defender.as_ref()?.entitys.get(loc.index)
         }
@@ -74,6 +94,11 @@ impl FightEntityDataMgr {
     pub fn find_by_model_id(&self, model_id: i32) -> Option<&FightEntityInfo> {
         if let Some(attacker) = self.fight.attacker.as_ref() {
             for entity in &attacker.entitys {
+                if entity.model_id == Some(model_id) {
+                    return Some(entity);
+                }
+            }
+            for entity in &attacker.sub_entitys {
                 if entity.model_id == Some(model_id) {
                     return Some(entity);
                 }
@@ -96,6 +121,11 @@ impl FightEntityDataMgr {
 
         if let Some(attacker) = self.fight.attacker.as_ref() {
             for entity in &attacker.entitys {
+                if entity.team_type == Some(team_type) {
+                    entities.push(entity);
+                }
+            }
+            for entity in &attacker.sub_entitys {
                 if entity.team_type == Some(team_type) {
                     entities.push(entity);
                 }
@@ -124,7 +154,12 @@ pub fn get_entity_mut_by_location(
     location: EntityLocation,
 ) -> Option<&mut FightEntityInfo> {
     if location.is_attacker {
-        fight.attacker.as_mut()?.entitys.get_mut(location.index)
+        let attacker = fight.attacker.as_mut()?;
+        if location.is_sub_entity {
+            attacker.sub_entitys.get_mut(location.index)
+        } else {
+            attacker.entitys.get_mut(location.index)
+        }
     } else {
         fight.defender.as_mut()?.entitys.get_mut(location.index)
     }

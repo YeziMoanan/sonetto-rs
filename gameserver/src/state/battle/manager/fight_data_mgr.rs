@@ -1,14 +1,19 @@
 use std::sync::Arc;
 
 use crate::state::battle::{
-    effects::effect_types::EffectType, manager::{
+    destiny::DestinyModifierMap,
+    effects::effect_types::EffectType,
+    manager::{
         blood_pool_mgr::FightBloodPoolDataMgr, buff_mgr::BuffMgr,
         calculate_mgr::FightCalculateDataMgr, card_mgr::FightCardMgr,
         entity_mgr::FightEntityDataMgr, round_mgr::FightRoundMgr,
-    }, mechanics::{
+    },
+    mechanics::{
         Mechanics,
         bloodtithe::{BloodtitheState, fight_enables_bloodtithe},
-    }, passives, step_builder::FightStepBuilder
+    },
+    passives,
+    step_builder::FightStepBuilder,
 };
 use anyhow::Result;
 use sonettobuf::{ActEffect, CardInfo, Fight, FightRound, FightStep};
@@ -27,7 +32,15 @@ pub struct FightDataMgr {
 
 impl FightDataMgr {
     pub fn new(fight: Fight) -> Self {
+        Self::new_with_destiny_modifiers(fight, DestinyModifierMap::new())
+    }
+
+    pub fn new_with_destiny_modifiers(
+        fight: Fight,
+        destiny_modifiers: DestinyModifierMap,
+    ) -> Self {
         let fight_arc = Arc::new(fight);
+        let destiny_modifiers = Arc::new(destiny_modifiers);
 
         let mut mechanics = Mechanics::new();
 
@@ -40,8 +53,14 @@ impl FightDataMgr {
             entity_mgr: FightEntityDataMgr::new(fight_arc.clone()),
             blood_pool_mgr,
             card_mgr: FightCardMgr::new(fight_arc.clone()),
-            round_mgr: FightRoundMgr::new(fight_arc.clone()),
-            calculate_mgr: FightCalculateDataMgr::new(fight_arc),
+            round_mgr: FightRoundMgr::new_with_destiny_modifiers(
+                fight_arc.clone(),
+                destiny_modifiers.clone(),
+            ),
+            calculate_mgr: FightCalculateDataMgr::new_with_destiny_modifiers(
+                fight_arc,
+                destiny_modifiers,
+            ),
             buff_mgr: BuffMgr::new(),
         }
     }
@@ -263,13 +282,13 @@ impl FightDataMgr {
 }
 
 fn process_effects(
-    effects: Vec<ActEffect>,
+    mut effects: Vec<ActEffect>,
     fight: &mut Fight,
     calculate_mgr: &mut FightCalculateDataMgr,
     bloodtithe: &mut BloodtitheState,
     buff_mgr: &mut BuffMgr,
 ) -> Result<Vec<ActEffect>> {
-    for effect in &effects {
+    for effect in &mut effects {
         calculate_mgr
             .play_act_effect_data(effect, fight, bloodtithe, buff_mgr)
             .map_err(|e| anyhow::anyhow!(e))?;

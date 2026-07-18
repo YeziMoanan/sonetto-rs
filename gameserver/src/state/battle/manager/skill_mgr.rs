@@ -1,4 +1,7 @@
-use crate::state::battle::{round::RoundState, skill_executor::SkillExecutor};
+use crate::state::battle::{
+    round::RoundState,
+    skill_executor::SkillExecutor,
+};
 use anyhow::Result;
 use sonettobuf::{Fight, FightStep};
 use std::sync::Arc;
@@ -25,7 +28,7 @@ impl FightSkillMgr {
         skill_id: i32,
     ) -> Result<FightStep> {
         let snapshot = state.snapshot_entities_map();
-        let executor = SkillExecutor::new(snapshot);
+        let executor = SkillExecutor::new(snapshot, state.destiny_modifiers.clone());
         executor.execute_skill(caster_uid, target_uid, skill_id, &state.buff_mgr)
     }
 }

@@ -1,10 +1,11 @@
 use sonettobuf::{
     ActEffect, Fight, FightExPointInfo, FightHeroSpAttributeInfo, FightStep, HeroSpAttribute,
-    PlayerSkillInfo,
+    PlayerSkillInfo, PowerInfo,
 };
 use std::sync::Arc;
 
 use crate::state::battle::{
+    destiny::{DestinyModifierMap, DestinyResolveError, ResolvedDestinyAttributes},
     effects::effect_types::EffectType,
     manager::{
         buff_mgr::BuffMgr,
@@ -13,17 +14,121 @@ use crate::state::battle::{
     mechanics::bloodtithe::BloodtitheState,
 };
 
+/// Apply the absolute PowerInfo payload emitted by effect type 295.
+///
+/// The client upserts by power id and clamps the current value to the
+/// declared maximum. The server accepts only complete absolute payloads;
+/// partial-field client default/removal semantics are not assumed.
+pub fn apply_power_info_change(
+    entity: &mut sonettobuf::FightEntityInfo,
+    incoming: &PowerInfo,
+) -> Result<(), DestinyResolveError> {
+    let power_id = incoming.power_id.ok_or_else(|| {
+        DestinyResolveError::InvalidConfig("PowerInfoChange missing power_id".to_string())
+    })?;
+    // The wire payload is an absolute replacement. Rejecting an omitted
+    // scalar is a server-side integrity guard; client default/removal
+    // semantics are not assumed without a matching protocol fixture.
+    let incoming_num = incoming.num.ok_or_else(|| {
+        DestinyResolveError::InvalidConfig(format!(
+            "PowerInfoChange missing num for power {power_id}"
+        ))
+    })?;
+    let max = incoming.max.ok_or_else(|| {
+        DestinyResolveError::InvalidConfig(format!(
+            "PowerInfoChange missing max for power {power_id}"
+        ))
+    })?;
+    if max < 0 {
+        return Err(DestinyResolveError::InvalidConfig(format!(
+            "PowerInfoChange max {max} is negative for power {power_id}"
+        )));
+    }
+    let normalized = PowerInfo {
+        power_id: Some(power_id),
+        num: Some(incoming_num.clamp(0, max)),
+        max: Some(max),
+    };
+    if let Some(slot) = entity
+        .power_infos
+        .iter_mut()
+        .find(|power| power.power_id == Some(power_id))
+    {
+        *slot = normalized;
+    } else {
+        entity.power_infos.push(normalized);
+    }
+    Ok(())
+}
+
+fn raw_modifier(resolved: &ResolvedDestinyAttributes, id: i32) -> i32 {
+    resolved
+        .raw_tenths
+        .get(&id)
+        .copied()
+        .and_then(|value| i32::try_from(value).ok())
+        .unwrap_or(0)
+}
+
+pub fn hero_sp_attribute_from_destiny(
+    resolved: Option<&ResolvedDestinyAttributes>,
+) -> HeroSpAttribute {
+    let empty = ResolvedDestinyAttributes::default();
+    let resolved = resolved.unwrap_or(&empty);
+    let mut attr = resolved.sp_attr;
+    attr.revive.get_or_insert(0);
+    attr.heal.get_or_insert(raw_modifier(resolved, 212));
+    attr.absorb.get_or_insert(0);
+    attr.defense_ignore.get_or_insert(0);
+    attr.clutch.get_or_insert(raw_modifier(resolved, 211));
+    attr.final_add_dmg.get_or_insert(0);
+    attr.final_drop_dmg.get_or_insert(0);
+    attr.normal_skill_rate
+        .get_or_insert(raw_modifier(resolved, 214));
+    attr.play_add_rate.get_or_insert(0);
+    attr.play_drop_rate.get_or_insert(0);
+    attr.dizzy_resistances.get_or_insert(0);
+    attr.sleep_resistances.get_or_insert(0);
+    attr.petrified_resistances.get_or_insert(0);
+    attr.frozen_resistances.get_or_insert(0);
+    attr.disarm_resistances.get_or_insert(0);
+    attr.forbid_resistances.get_or_insert(0);
+    attr.seal_resistances.get_or_insert(0);
+    attr.cant_get_exskill_resistances.get_or_insert(0);
+    attr.del_ex_point_resistances.get_or_insert(0);
+    attr.stress_up_resistances.get_or_insert(0);
+    attr.control_resilience.get_or_insert(0);
+    attr.del_ex_point_resilience.get_or_insert(0);
+    attr.stress_up_resilience.get_or_insert(0);
+    attr.charm_resistances.get_or_insert(0);
+    attr.rebound_dmg.get_or_insert(raw_modifier(resolved, 218));
+    attr.extra_dmg.get_or_insert(raw_modifier(resolved, 219));
+    attr.reuse_dmg.get_or_insert(raw_modifier(resolved, 220));
+    attr.big_skill_rate.get_or_insert(0);
+    attr.clutch_dmg.get_or_insert(0);
+    attr
+}
+
 #[derive(Default, Debug, Clone)]
 pub struct FightCalculateDataMgr {
     fight: Arc<Fight>,
+    destiny_modifiers: Arc<DestinyModifierMap>,
     entity_mgr: FightEntityDataMgr,
     buff_mgr: BuffMgr,
 }
 
 impl FightCalculateDataMgr {
     pub fn new(fight: Arc<Fight>) -> Self {
+        Self::new_with_destiny_modifiers(fight, Arc::new(DestinyModifierMap::new()))
+    }
+
+    pub fn new_with_destiny_modifiers(
+        fight: Arc<Fight>,
+        destiny_modifiers: Arc<DestinyModifierMap>,
+    ) -> Self {
         Self {
             fight: fight.clone(),
+            destiny_modifiers,
             entity_mgr: FightEntityDataMgr::new(fight.clone()),
             buff_mgr: BuffMgr::new(),
         }
@@ -31,12 +136,12 @@ impl FightCalculateDataMgr {
 
     pub fn play_step_data(
         &mut self,
-        step: &FightStep,
+        step: &mut FightStep,
         fight: &mut Fight,
         bloodtithe: &mut BloodtitheState,
         buff_mgr: &mut BuffMgr,
     ) -> Result<(), String> {
-        for effect in &step.act_effect {
+        for effect in &mut step.act_effect {
             self.play_act_effect_data(effect, fight, bloodtithe, buff_mgr)?;
         }
         Ok(())
@@ -44,7 +149,7 @@ impl FightCalculateDataMgr {
 
     pub fn play_step_data_list(
         &mut self,
-        steps: &[FightStep],
+        steps: &mut [FightStep],
         fight: &mut Fight,
         bloodtithe: &mut BloodtitheState,
         buff_mgr: &mut BuffMgr,
@@ -57,12 +162,12 @@ impl FightCalculateDataMgr {
 
     pub fn play_act_effect_data(
         &mut self,
-        effect: &ActEffect,
+        effect: &mut ActEffect,
         fight: &mut Fight,
         bloodtithe: &mut BloodtitheState,
         buff_mgr: &mut BuffMgr,
     ) -> Result<(), String> {
-        if let Some(ref nested) = effect.fight_step {
+        if let Some(ref mut nested) = effect.fight_step {
             return self.play_step_data(nested, fight, bloodtithe, buff_mgr);
         }
 
@@ -109,6 +214,8 @@ impl FightCalculateDataMgr {
             EffectType::AddExPoint | EffectType::ExPointChange => {
                 self.play_effect_add_ex_point(effect, fight)
             }
+
+            EffectType::PowerInfoChange => self.play_effect_power_info_change(effect, fight),
 
             EffectType::BloodPoolMaxCreate => self.play_effect_bloodtithe_enable(effect),
             EffectType::BloodPoolMaxChange => self.play_effect_bloodtithe_max(effect),
@@ -308,6 +415,32 @@ impl FightCalculateDataMgr {
         Ok(())
     }
 
+    fn play_effect_power_info_change(
+        &mut self,
+        effect: &mut ActEffect,
+        fight: &mut Fight,
+    ) -> Result<(), String> {
+        let target_id = effect.target_id.ok_or("PowerInfoChange missing target ID")?;
+        let incoming = effect
+            .power_info
+            .as_ref()
+            .ok_or("PowerInfoChange missing PowerInfo")?;
+        let location = self
+            .entity_mgr
+            .get_location(target_id)
+            .ok_or_else(|| format!("Entity {target_id} not found"))?;
+        let entity = get_entity_mut_by_location(fight, location)
+            .ok_or_else(|| format!("Failed to get entity {target_id} mutably"))?;
+        let power_id = incoming.power_id;
+        apply_power_info_change(entity, incoming).map_err(|error| error.to_string())?;
+        effect.power_info = entity
+            .power_infos
+            .iter()
+            .find(|power| power.power_id == power_id)
+            .copied();
+        Ok(())
+    }
+
     fn play_effect_fight_hurt_detail(
         &mut self,
         effect: &ActEffect,
@@ -356,7 +489,7 @@ impl FightCalculateDataMgr {
                 info.push(FightExPointInfo {
                     uid: entity.uid,
                     ex_point: entity.ex_point,
-                    power_infos: vec![],
+                    power_infos: entity.power_infos.clone(),
                     current_hp: entity.current_hp,
                     ex_point_type: if entity.model_id == Some(3120) {
                         Some(1)
@@ -370,7 +503,7 @@ impl FightCalculateDataMgr {
                 info.push(FightExPointInfo {
                     uid: entity.uid,
                     ex_point: entity.ex_point,
-                    power_infos: vec![],
+                    power_infos: entity.power_infos.clone(),
                     current_hp: entity.current_hp,
                     ex_point_type: Some(0),
                 });
@@ -382,7 +515,7 @@ impl FightCalculateDataMgr {
                 info.push(FightExPointInfo {
                     uid: entity.uid,
                     ex_point: entity.ex_point,
-                    power_infos: vec![],
+                    power_infos: entity.power_infos.clone(),
                     current_hp: entity.current_hp,
                     ex_point_type: Some(0),
                 });
@@ -393,47 +526,25 @@ impl FightCalculateDataMgr {
     }
 
     pub fn build_hero_sp_attributes(&mut self, fight: &Fight) -> Vec<FightHeroSpAttributeInfo> {
-        let mut attrs = vec![];
-
-        if let Some(ref defender) = fight.defender {
-            for entity in &defender.entitys {
-                attrs.push(FightHeroSpAttributeInfo {
-                    uid: entity.uid,
-                    attribute: Some(HeroSpAttribute {
-                        revive: Some(0),
-                        heal: Some(0),
-                        absorb: Some(0),
-                        defense_ignore: Some(0),
-                        clutch: Some(0),
-                        final_add_dmg: Some(0),
-                        final_drop_dmg: Some(0),
-                        normal_skill_rate: Some(0),
-                        play_add_rate: Some(0),
-                        play_drop_rate: Some(0),
-                        dizzy_resistances: Some(0),
-                        sleep_resistances: Some(0),
-                        petrified_resistances: Some(0),
-                        frozen_resistances: Some(0),
-                        disarm_resistances: Some(0),
-                        forbid_resistances: Some(0),
-                        seal_resistances: Some(0),
-                        cant_get_exskill_resistances: Some(0),
-                        del_ex_point_resistances: Some(0),
-                        stress_up_resistances: Some(0),
-                        control_resilience: Some(0),
-                        del_ex_point_resilience: Some(0),
-                        stress_up_resilience: Some(0),
-                        charm_resistances: Some(0),
-                        rebound_dmg: Some(0),
-                        extra_dmg: Some(0),
-                        reuse_dmg: Some(0),
-                        big_skill_rate: Some(0),
-                        clutch_dmg: Some(0),
-                    }),
-                });
+        let mut attrs = Vec::new();
+        let mut append = |entity: &sonettobuf::FightEntityInfo| {
+            attrs.push(FightHeroSpAttributeInfo {
+                uid: entity.uid,
+                attribute: Some(hero_sp_attribute_from_destiny(
+                    entity.uid.and_then(|uid| self.destiny_modifiers.get(&uid)),
+                )),
+            });
+        };
+        if let Some(attacker) = &fight.attacker {
+            for entity in attacker.entitys.iter().chain(attacker.sub_entitys.iter()) {
+                append(entity);
             }
         }
-
+        if let Some(defender) = &fight.defender {
+            for entity in &defender.entitys {
+                append(entity);
+            }
+        }
         attrs
     }
 

@@ -6,8 +6,12 @@ use gameserver::state::battle::destiny::{
     ResolvedHeroKit,
 };
 use gameserver::state::battle::generate_initial_deck;
-use gameserver::state::battle::entity_builder::{build_hero_entity, resolve_entity_kit};
-use gameserver::state::battle::fight_builder::build_attacker_team;
+use gameserver::state::battle::entity_builder::{
+    build_hero_entity, resolve_entity_destiny_attributes, resolve_entity_kit,
+};
+use gameserver::state::battle::fight_builder::{
+    build_attacker_team, build_attacker_team_with_destiny_modifiers,
+};
 use sonettobuf::{FightGroup, TrialHero};
 use sqlx::SqlitePool;
 
@@ -140,6 +144,18 @@ async fn live_owned_main_and_substitute_use_the_same_resolved_kit() {
 }
 
 #[tokio::test]
+async fn owned_default_skin_is_not_inferred_as_activity_role() {
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let hero = owned_hero(3101, 0, 0, 0);
+
+    let entity = build_hero_entity(&pool, &hero, 1, 1, false)
+        .await
+        .expect("owned hero should use the owned source path");
+
+    assert_eq!(entity.passive_skill, vec![31010141, 31010142]);
+}
+
+#[tokio::test]
 async fn destiny_percentages_use_pre_equipment_base_attributes() {
     init_config();
     let game = config::configs::get();
@@ -205,6 +221,25 @@ fn hero_3088_keeps_compatibility_passives_once() {
 }
 
 #[test]
+fn activity174_kit_uses_role_specific_passives() {
+    let resolved = kit(context(3012, 0, 0, 0, HeroSource::Activity, false));
+
+    assert_eq!(resolved.skill_group_1, vec![30120111, 30120112, 30120113]);
+    assert_eq!(resolved.skill_group_2, vec![30120121, 30120122, 30120123]);
+    assert_eq!(resolved.ultimate, 30120131);
+    assert_eq!(resolved.passives, vec![6230812, 30120142]);
+}
+
+#[test]
+fn activity174_composite_passives_follow_client_number_split() {
+    let hero_3101 = kit(context(3101, 0, 0, 0, HeroSource::Activity, false));
+    assert_eq!(hero_3101.passives, vec![31010141]);
+
+    let hero_3103 = kit(context(3103, 0, 0, 0, HeroSource::Activity, false));
+    assert_eq!(hero_3103.passives, vec![31030141, 31030151]);
+}
+
+#[test]
 fn hero_3088_foreign_facet_is_inactive_without_compatibility_bonuses() {
     let resolved = kit(context(3088, 5, 4, 311001, HeroSource::Owned, false));
     assert!(!resolved.passives.contains(&308801911));
@@ -213,11 +248,42 @@ fn hero_3088_foreign_facet_is_inactive_without_compatibility_bonuses() {
 }
 
 #[tokio::test]
+async fn live_builder_foreign_facet_does_not_add_destiny_attributes() {
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let valid = owned_hero(3088, 5, 308801, 4);
+    let foreign = owned_hero(3088, 5, 311001, 4);
+    let baseline = owned_hero(3088, 5, 0, 0);
+
+    let valid_entity = build_hero_entity(&pool, &valid, 1, 1, false).await.unwrap();
+    let foreign_entity = build_hero_entity(&pool, &foreign, 1, 1, false).await.unwrap();
+    let baseline_entity = build_hero_entity(&pool, &baseline, 1, 1, false).await.unwrap();
+
+    let valid_attr = valid_entity.attr.as_ref().expect("valid attrs");
+    let foreign_attr = foreign_entity.attr.as_ref().expect("foreign attrs");
+    let baseline_attr = baseline_entity.attr.as_ref().expect("baseline attrs");
+    assert!(valid_attr.hp > baseline_attr.hp);
+    assert_eq!(foreign_attr.hp, baseline_attr.hp);
+    assert_eq!(foreign_attr.attack, baseline_attr.attack);
+    assert_eq!(foreign_attr.defense, baseline_attr.defense);
+    assert_eq!(foreign_attr.mdefense, baseline_attr.mdefense);
+}
+
+#[tokio::test]
 async fn live_builder_propagates_unresolvable_hero_kit() {
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
     let mut hero = owned_hero(3110, 5, 0, 0);
     hero.record.hero_id = 9999;
     let result = build_hero_entity(&pool, &hero, 1, 1, false).await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn live_builder_does_not_mask_non_facet_resolver_errors() {
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let hero = owned_hero(3110, 6, 311001, 4);
+
+    let result = build_hero_entity(&pool, &hero, 1, 1, false).await;
+
     assert!(result.is_err());
 }
 
@@ -232,20 +298,21 @@ fn trial_2241001_uses_explicit_trial_fields() {
         .character
         .get(trial.hero_id)
         .expect("trial character should exist");
-    let resolved = kit(HeroBuildContext {
+    let context = HeroBuildContext {
         hero_id: trial.hero_id,
         skin: trial.skin,
         rank: character.rank,
         ex_skill_level: trial.ex_skill_lv,
         destiny: DestinyState {
             rank: trial.facetslevel,
-            level: 0,
+            level: 1,
             facet_id: trial.facets_id,
         },
         is_substitute: false,
         hero_type: character.hero_type,
         source: HeroSource::Trial,
-    });
+    };
+    let resolved = kit(context.clone());
 
     assert_eq!(resolved.skill_group_1, vec![30410314, 30410315, 30410316]);
     assert_eq!(resolved.skill_group_2, vec![30410324, 30410325, 30410326]);
@@ -254,6 +321,31 @@ fn trial_2241001_uses_explicit_trial_fields() {
     assert_eq!(resolved.power_infos[0].power_id, Some(1));
     assert_eq!(resolved.power_infos[0].num, Some(0));
     assert_eq!(resolved.power_infos[0].max, Some(5));
+
+    let level = config::configs::get()
+        .character_level
+        .iter()
+        .find(|row| row.hero_id == trial.hero_id && row.level == trial.level)
+        .expect("trial level fixture should exist");
+    let attributes = resolve_entity_destiny_attributes(
+        &context,
+        HeroBaseAttributes {
+            hp: level.hp,
+            attack: level.atk,
+            defense: level.def,
+            mdefense: level.mdef,
+        },
+    )
+    .expect("trial Destiny attributes should resolve");
+    assert_eq!(
+        (
+            attributes.hp,
+            attributes.attack,
+            attributes.defense,
+            attributes.mdefense,
+        ),
+        (495, 91, 36, 42)
+    );
 }
 
 #[tokio::test]
@@ -287,6 +379,41 @@ async fn fight_group_trial_list_builds_trial_once_with_configured_kit() {
     assert_eq!(trial.power_infos[0].max, Some(5));
     assert_eq!(trial.destiny_stone, Some(304101));
     assert_eq!(trial.destiny_rank, Some(4));
+    let attr = trial.attr.as_ref().expect("trial attributes should exist");
+    assert_eq!(attr.hp, Some(5_939));
+    assert_eq!(attr.attack, Some(1_044));
+    assert_eq!(attr.defense, Some(475));
+    assert_eq!(attr.mdefense, Some(532));
+}
+
+#[tokio::test]
+async fn trial_list_contributes_destiny_combat_modifiers() {
+    init_config();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let group = FightGroup {
+        trial_hero_list: vec![TrialHero {
+            trial_id: Some(2241001),
+            pos: Some(3),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let (_, modifiers) = build_attacker_team_with_destiny_modifiers(&pool, 7, &group)
+        .await
+        .unwrap();
+    let modifier = modifiers
+        .get(&-1)
+        .expect("trial UID should retain its Destiny combat modifier");
+    assert_eq!(
+        (
+            modifier.hp,
+            modifier.attack,
+            modifier.defense,
+            modifier.mdefense,
+        ),
+        (495, 91, 36, 42)
+    );
 }
 
 #[tokio::test]
@@ -345,6 +472,6 @@ async fn explicit_trial_list_rejects_missing_trial_id() {
         ..Default::default()
     };
 
-    assert!(generate_initial_deck(&pool, 7, &group, 0).await.is_err());
     assert!(build_attacker_team(&pool, 7, &group).await.is_err());
+    assert!(generate_initial_deck(&pool, 7, &group, 0).await.is_err());
 }

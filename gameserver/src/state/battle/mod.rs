@@ -48,13 +48,20 @@ pub async fn create_battle(
     fight_group: &sonettobuf::FightGroup,
     player_deck: Vec<sonettobuf::CardInfo>,
 ) -> Result<(Fight, FightRound, FightDataMgr, Vec<CardInfo>)> {
-    let fight = fight_builder::build_fight(pool, &ctx, fight_group).await?;
+    let (fight, destiny_modifiers) =
+        fight_builder::build_fight_with_destiny_modifiers(pool, &ctx, fight_group).await?;
 
     let seed = (ctx.player_id as u64) ^ (ctx.episode_id as u64) ^ 0xA11C;
     let ai_deck = generate_ai_initial_deck(&fight, seed).await;
 
     let (initial_round, modified_fight, fight_data_mgr) =
-        round_builder::build_initial_round(fight, player_deck, ai_deck.clone()).await?;
+        round_builder::build_initial_round(
+            fight,
+            player_deck,
+            ai_deck.clone(),
+            destiny_modifiers,
+        )
+        .await?;
 
     Ok((modified_fight, initial_round, fight_data_mgr, ai_deck))
 }

@@ -2,6 +2,8 @@
 
 use std::collections::BTreeMap;
 
+use sonettobuf::{HeroExAttribute, HeroSpAttribute};
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct FixedTenths(pub i64);
 
@@ -79,5 +81,14 @@ pub struct ResolvedDestinyAttributes {
     pub defense: i32,
     pub mdefense: i32,
     pub raw_tenths: BTreeMap<i32, i64>,
+    /// Protocol-compatible special attributes resolved from Destiny nodes.
+    /// `real_hurt_rate` and `poison_add_rate` stay internal until an
+    /// authoritative damage formula identifies their consumption point.
+    pub ex_attr: HeroExAttribute,
+    pub sp_attr: HeroSpAttribute,
+    pub real_hurt_rate: i32,
+    pub poison_add_rate: i32,
     pub trace: Vec<DestinyTrace>,
 }
+
+pub type DestinyModifierMap = BTreeMap<i64, ResolvedDestinyAttributes>;

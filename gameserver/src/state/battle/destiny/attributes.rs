@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 
 use config::destiny::DestinyConfigIndex;
+use sonettobuf::{HeroExAttribute, HeroSpAttribute};
 
 use super::types::{
     DestinyResolveError, DestinyState, DestinyTrace, FixedTenths, HeroBaseAttributes,
@@ -108,12 +109,34 @@ pub fn resolve_destiny_attributes(
         .checked_add(percent_value(&raw_tenths, PERCENT_MDEFENSE, base.mdefense)?)
         .ok_or(DestinyResolveError::Overflow)?;
 
+    let ex_attr = HeroExAttribute {
+        cri: Some(raw_value(&raw_tenths, 201)?),
+        cri_dmg: Some(raw_value(&raw_tenths, 203)?),
+        add_dmg: Some(raw_value(&raw_tenths, 205)?),
+        ..Default::default()
+    };
+    let sp_attr = HeroSpAttribute {
+        clutch: Some(raw_value(&raw_tenths, 211)?),
+        heal: Some(raw_value(&raw_tenths, 212)?),
+        normal_skill_rate: Some(raw_value(&raw_tenths, 214)?),
+        rebound_dmg: Some(raw_value(&raw_tenths, 218)?),
+        extra_dmg: Some(raw_value(&raw_tenths, 219)?),
+        reuse_dmg: Some(raw_value(&raw_tenths, 220)?),
+        ..Default::default()
+    };
+    let real_hurt_rate = raw_value(&raw_tenths, 217)?;
+    let poison_add_rate = raw_value(&raw_tenths, 301)?;
+
     Ok(ResolvedDestinyAttributes {
         hp,
         attack,
         defense,
         mdefense,
         raw_tenths,
+        ex_attr,
+        sp_attr,
+        real_hurt_rate,
+        poison_add_rate,
         trace,
     })
 }

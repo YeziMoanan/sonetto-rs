@@ -8,6 +8,6 @@ pub use self::attributes::{is_supported_destiny_attribute, resolve_destiny_attri
 pub use self::kit::{ResolvedHeroKit, SkillExchange, parse_skill_exchanges, resolve_hero_kit};
 
 pub use self::types::{
-    DestinyResolveError, DestinyState, DestinyTrace, FixedTenths, HeroBaseAttributes,
-    HeroBuildContext, HeroSource, ResolvedDestinyAttributes,
+    DestinyModifierMap, DestinyResolveError, DestinyState, DestinyTrace, FixedTenths,
+    HeroBaseAttributes, HeroBuildContext, HeroSource, ResolvedDestinyAttributes,
 };
