@@ -15,8 +15,19 @@ pub async fn on_destiny_level_up(
     req: ClientPacket,
 ) -> Result<(), AppError> {
     let request = DestinyLevelUpRequest::decode(&req.data[..])?;
-    let hero_id = request.hero_id.ok_or(AppError::InvalidRequest)?;
-    let target_level = request.level.ok_or(AppError::InvalidRequest)?;
+    let (Some(hero_id), Some(target_level)) = (request.hero_id, request.level) else {
+        return send_destiny_failure(
+            ctx,
+            CmdId::DestinyLevelUpCmd,
+            DestinyLevelUpReply {
+                hero_id: request.hero_id,
+                level: request.level,
+            },
+            DestinyProtocolFailure::Invalid,
+            req.up_tag,
+        )
+        .await;
+    };
     let (player_id, pool) = {
         let conn = ctx.lock().await;
         (

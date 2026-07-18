@@ -15,7 +15,16 @@ pub async fn on_destiny_rank_up(
     req: ClientPacket,
 ) -> Result<(), AppError> {
     let request = DestinyRankUpRequest::decode(&req.data[..])?;
-    let hero_id = request.hero_id.ok_or(AppError::InvalidRequest)?;
+    let Some(hero_id) = request.hero_id else {
+        return send_destiny_failure(
+            ctx,
+            CmdId::DestinyRankUpCmd,
+            DestinyRankUpReply { hero_id: None },
+            DestinyProtocolFailure::Invalid,
+            req.up_tag,
+        )
+        .await;
+    };
     let (player_id, pool) = {
         let conn = ctx.lock().await;
         (

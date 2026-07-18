@@ -15,8 +15,19 @@ pub async fn on_destiny_stone_unlock(
     req: ClientPacket,
 ) -> Result<(), AppError> {
     let request = DestinyStoneUnlockRequest::decode(&req.data[..])?;
-    let hero_id = request.hero_id.ok_or(AppError::InvalidRequest)?;
-    let stone_id = request.stone_id.ok_or(AppError::InvalidRequest)?;
+    let (Some(hero_id), Some(stone_id)) = (request.hero_id, request.stone_id) else {
+        return send_destiny_failure(
+            ctx,
+            CmdId::DestinyStoneUnlockCmd,
+            DestinyStoneUnlockReply {
+                hero_id: request.hero_id,
+                stone_id: request.stone_id,
+            },
+            DestinyProtocolFailure::Invalid,
+            req.up_tag,
+        )
+        .await;
+    };
     let (player_id, pool) = {
         let conn = ctx.lock().await;
         (

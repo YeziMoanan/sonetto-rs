@@ -484,6 +484,112 @@ async fn destiny_validation_failure_reply_keeps_connection_open() {
 }
 
 #[tokio::test]
+async fn destiny_missing_required_field_reply_keeps_connection_open() {
+    let (temp_db, ctx, mut client) = test_connection_with_destiny_hero(1, 1, 0).await;
+
+    let invalid_requests = [
+        (
+            CmdId::DestinyRankUpCmd,
+            36,
+            client_packet(
+                CmdId::DestinyRankUpCmd,
+                36,
+                DestinyRankUpRequest { hero_id: None },
+            ),
+        ),
+        (
+            CmdId::DestinyLevelUpCmd,
+            37,
+            client_packet(
+                CmdId::DestinyLevelUpCmd,
+                37,
+                DestinyLevelUpRequest {
+                    hero_id: None,
+                    level: Some(2),
+                },
+            ),
+        ),
+        (
+            CmdId::DestinyStoneUnlockCmd,
+            38,
+            client_packet(
+                CmdId::DestinyStoneUnlockCmd,
+                38,
+                DestinyStoneUnlockRequest {
+                    hero_id: Some(HERO_ID),
+                    stone_id: None,
+                },
+            ),
+        ),
+        (
+            CmdId::DestinyStoneUseCmd,
+            39,
+            client_packet(
+                CmdId::DestinyStoneUseCmd,
+                39,
+                DestinyStoneUseRequest {
+                    hero_id: None,
+                    stone_id: Some(0),
+                },
+            ),
+        ),
+    ];
+
+    for (cmd, up_tag, request) in invalid_requests {
+        dispatch_command(Arc::clone(&ctx), &request).await.unwrap();
+        ctx.lock().await.flush_send_queue().await.unwrap();
+
+        let failure = read_server_packet(&mut client).await;
+        assert_eq!(failure.cmd_id, cmd as i16);
+        assert_eq!(failure.result_code, 1);
+        assert_eq!(failure.up_tag, up_tag);
+        match cmd {
+            CmdId::DestinyRankUpCmd => {
+                assert_eq!(
+                    failure
+                        .decode_message::<DestinyRankUpReply>()
+                        .unwrap()
+                        .hero_id,
+                    None
+                );
+            }
+            CmdId::DestinyLevelUpCmd => {
+                let reply = failure.decode_message::<DestinyLevelUpReply>().unwrap();
+                assert_eq!(reply.hero_id, None);
+                assert_eq!(reply.level, Some(2));
+            }
+            CmdId::DestinyStoneUnlockCmd => {
+                let reply = failure
+                    .decode_message::<DestinyStoneUnlockReply>()
+                    .unwrap();
+                assert_eq!(reply.hero_id, Some(HERO_ID));
+                assert_eq!(reply.stone_id, None);
+            }
+            CmdId::DestinyStoneUseCmd => {
+                let reply = failure.decode_message::<DestinyStoneUseReply>().unwrap();
+                assert_eq!(reply.hero_id, None);
+                assert_eq!(reply.stone_id, Some(0));
+            }
+            _ => unreachable!(),
+        }
+
+        dispatch_and_flush(
+            Arc::clone(&ctx),
+            client_packet(CmdId::GetServerTimeCmd, up_tag + 1, GetServerTimeRequest {}),
+        )
+        .await;
+        let time_packet = read_server_packet(&mut client).await;
+        let time_reply = time_packet.decode_message::<GetServerTimeReply>().unwrap();
+        assert_eq!(time_packet.cmd_id, CmdId::GetServerTimeCmd as i16);
+        assert_eq!(time_packet.result_code, 0);
+        assert_eq!(time_packet.up_tag, up_tag + 1);
+        assert!(time_reply.server_time.is_some());
+    }
+
+    close_and_cleanup(temp_db, ctx, client).await;
+}
+
+#[tokio::test]
 async fn destiny_insufficient_material_reply_keeps_connection_open() {
     let (temp_db, ctx, mut client) = test_connection_with_destiny_hero(0, 0, 0).await;
     let db = ctx.lock().await.state.db.clone();
