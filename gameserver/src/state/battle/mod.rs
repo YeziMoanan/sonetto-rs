@@ -2,6 +2,7 @@ mod auto;
 mod cards;
 mod passives;
 
+pub mod destiny;
 pub mod effects;
 pub mod end_fight;
 pub mod entity_builder;
