@@ -590,6 +590,171 @@ async fn destiny_missing_required_field_reply_keeps_connection_open() {
 }
 
 #[tokio::test]
+async fn destiny_malformed_payloads_reply_invalid_and_keep_connection_open() {
+    let (temp_db, ctx, mut client) = test_connection_with_destiny_hero(1, 1, 0).await;
+    let commands = [
+        CmdId::DestinyRankUpCmd,
+        CmdId::DestinyLevelUpCmd,
+        CmdId::DestinyStoneUnlockCmd,
+        CmdId::DestinyStoneUseCmd,
+    ];
+
+    for (index, cmd) in commands.into_iter().enumerate() {
+        let up_tag = 60 + index as u8;
+        let request = ClientPacket {
+            sequence: 1,
+            cmd_id: cmd as i16,
+            up_tag,
+            data: vec![0x08, 0x80],
+        }
+        .encode();
+        dispatch_command(Arc::clone(&ctx), &request).await.unwrap();
+        ctx.lock().await.flush_send_queue().await.unwrap();
+
+        let failure = read_server_packet(&mut client).await;
+        assert_eq!(failure.cmd_id, cmd as i16);
+        assert_eq!(failure.result_code, 1);
+        assert_eq!(failure.up_tag, up_tag);
+        match cmd {
+            CmdId::DestinyRankUpCmd => {
+                let reply = failure.decode_message::<DestinyRankUpReply>().unwrap();
+                assert_eq!(reply.hero_id, None);
+            }
+            CmdId::DestinyLevelUpCmd => {
+                let reply = failure.decode_message::<DestinyLevelUpReply>().unwrap();
+                assert_eq!(reply.hero_id, None);
+                assert_eq!(reply.level, None);
+            }
+            CmdId::DestinyStoneUnlockCmd => {
+                let reply = failure
+                    .decode_message::<DestinyStoneUnlockReply>()
+                    .unwrap();
+                assert_eq!(reply.hero_id, None);
+                assert_eq!(reply.stone_id, None);
+            }
+            CmdId::DestinyStoneUseCmd => {
+                let reply = failure.decode_message::<DestinyStoneUseReply>().unwrap();
+                assert_eq!(reply.hero_id, None);
+                assert_eq!(reply.stone_id, None);
+            }
+            _ => unreachable!(),
+        }
+
+        dispatch_and_flush(
+            Arc::clone(&ctx),
+            client_packet(CmdId::GetServerTimeCmd, up_tag + 20, GetServerTimeRequest {}),
+        )
+        .await;
+        let time_packet = read_server_packet(&mut client).await;
+        assert_eq!(time_packet.cmd_id, CmdId::GetServerTimeCmd as i16);
+        assert_eq!(time_packet.result_code, 0);
+        assert_eq!(time_packet.up_tag, up_tag + 20);
+    }
+
+    close_and_cleanup(temp_db, ctx, client).await;
+}
+
+#[tokio::test]
+async fn destiny_catalog_failures_reply_internal_and_keep_connection_open() {
+    let (temp_db, ctx, mut client) = test_connection_with_destiny_hero(1, 1, 0).await;
+    let requests = [
+        ClientPacket {
+            sequence: 1,
+            cmd_id: CmdId::DestinyRankUpCmd as i16,
+            up_tag: 70,
+            data: DestinyRankUpRequest {
+                hero_id: Some(HERO_ID),
+            }
+            .encode_to_vec(),
+        },
+        ClientPacket {
+            sequence: 1,
+            cmd_id: CmdId::DestinyLevelUpCmd as i16,
+            up_tag: 71,
+            data: DestinyLevelUpRequest {
+                hero_id: Some(HERO_ID),
+                level: Some(2),
+            }
+            .encode_to_vec(),
+        },
+        ClientPacket {
+            sequence: 1,
+            cmd_id: CmdId::DestinyStoneUnlockCmd as i16,
+            up_tag: 72,
+            data: DestinyStoneUnlockRequest {
+                hero_id: Some(HERO_ID),
+                stone_id: Some(FIRST_STONE_ID),
+            }
+            .encode_to_vec(),
+        },
+        ClientPacket {
+            sequence: 1,
+            cmd_id: CmdId::DestinyStoneUseCmd as i16,
+            up_tag: 73,
+            data: DestinyStoneUseRequest {
+                hero_id: Some(HERO_ID),
+                stone_id: Some(0),
+            }
+            .encode_to_vec(),
+        },
+    ];
+
+    for request in requests {
+        let cmd_id = request.cmd_id;
+        let up_tag = request.up_tag;
+        ConnectionContext::dispatch_destiny_with_catalog(
+            Arc::clone(&ctx),
+            request,
+            || anyhow::bail!("injected Destiny catalog failure"),
+        )
+        .await
+        .unwrap();
+        ctx.lock().await.flush_send_queue().await.unwrap();
+
+        let failure = read_server_packet(&mut client).await;
+        assert_eq!(failure.cmd_id, cmd_id);
+        assert_eq!(failure.result_code, 4);
+        assert_eq!(failure.up_tag, up_tag);
+        match cmd_id {
+            id if id == CmdId::DestinyRankUpCmd as i16 => {
+                let reply = failure.decode_message::<DestinyRankUpReply>().unwrap();
+                assert_eq!(reply.hero_id, Some(HERO_ID));
+            }
+            id if id == CmdId::DestinyLevelUpCmd as i16 => {
+                let reply = failure.decode_message::<DestinyLevelUpReply>().unwrap();
+                assert_eq!(reply.hero_id, Some(HERO_ID));
+                assert_eq!(reply.level, Some(2));
+            }
+            id if id == CmdId::DestinyStoneUnlockCmd as i16 => {
+                let reply = failure
+                    .decode_message::<DestinyStoneUnlockReply>()
+                    .unwrap();
+                assert_eq!(reply.hero_id, Some(HERO_ID));
+                assert_eq!(reply.stone_id, Some(FIRST_STONE_ID));
+            }
+            id if id == CmdId::DestinyStoneUseCmd as i16 => {
+                let reply = failure.decode_message::<DestinyStoneUseReply>().unwrap();
+                assert_eq!(reply.hero_id, Some(HERO_ID));
+                assert_eq!(reply.stone_id, Some(0));
+            }
+            _ => unreachable!(),
+        }
+
+        dispatch_and_flush(
+            Arc::clone(&ctx),
+            client_packet(CmdId::GetServerTimeCmd, up_tag + 20, GetServerTimeRequest {}),
+        )
+        .await;
+        let time_packet = read_server_packet(&mut client).await;
+        assert_eq!(time_packet.cmd_id, CmdId::GetServerTimeCmd as i16);
+        assert_eq!(time_packet.result_code, 0);
+        assert_eq!(time_packet.up_tag, up_tag + 20);
+    }
+
+    close_and_cleanup(temp_db, ctx, client).await;
+}
+
+#[tokio::test]
 async fn destiny_insufficient_material_reply_keeps_connection_open() {
     let (temp_db, ctx, mut client) = test_connection_with_destiny_hero(0, 0, 0).await;
     let db = ctx.lock().await.state.db.clone();

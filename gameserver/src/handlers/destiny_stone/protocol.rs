@@ -1,5 +1,7 @@
 use crate::error::AppError;
+use crate::network::packet::ClientPacket;
 use crate::state::ConnectionContext;
+use config::destiny::DestinyConfigIndex;
 use database::db::game::destiny::CommittedDestinyChange;
 use database::models::game::destiny::ProgressionError;
 use database::models::game::heros::{HeroModel, UserHeroModel};
@@ -72,6 +74,100 @@ impl From<&ProgressionError> for DestinyProtocolFailure {
             ProgressionError::Insufficient(_) => Self::Insufficient,
             ProgressionError::Conflict => Self::Conflict,
             ProgressionError::Database(_) => Self::Internal,
+        }
+    }
+}
+
+pub(super) async fn decode_destiny_request<M, R>(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    req: &ClientPacket,
+    reply_cmd: CmdId,
+) -> Result<Option<M>, AppError>
+where
+    M: Message + Default,
+    R: Message + Default,
+{
+    match M::decode(&req.data[..]) {
+        Ok(request) => Ok(Some(request)),
+        Err(error) => {
+            tracing::warn!(
+                command = ?reply_cmd,
+                error = %error,
+                "Destiny request payload rejected"
+            );
+            send_destiny_failure(
+                ctx,
+                reply_cmd,
+                R::default(),
+                DestinyProtocolFailure::Invalid,
+                req.up_tag,
+            )
+            .await?;
+            Ok(None)
+        }
+    }
+}
+
+pub(super) async fn load_destiny_catalog<R, F>(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    reply_cmd: CmdId,
+    reply: R,
+    up_tag: u8,
+    loader: F,
+) -> Result<Option<DestinyConfigIndex>, AppError>
+where
+    R: Message,
+    F: FnOnce() -> anyhow::Result<DestinyConfigIndex>,
+{
+    match loader() {
+        Ok(catalog) => Ok(Some(catalog)),
+        Err(error) => {
+            tracing::error!(
+                command = ?reply_cmd,
+                error = %error,
+                "Destiny configuration unavailable"
+            );
+            send_destiny_failure(
+                ctx,
+                reply_cmd,
+                reply,
+                DestinyProtocolFailure::Internal,
+                up_tag,
+            )
+            .await?;
+            Ok(None)
+        }
+    }
+}
+
+impl ConnectionContext {
+    #[doc(hidden)]
+    #[allow(dead_code)]
+    pub async fn dispatch_destiny_with_catalog<F>(
+        ctx: Arc<Mutex<Self>>,
+        req: ClientPacket,
+        loader: F,
+    ) -> Result<(), AppError>
+    where
+        F: FnOnce() -> anyhow::Result<DestinyConfigIndex>,
+    {
+        match req.cmd_id {
+            x if x == CmdId::DestinyRankUpCmd as i16 => {
+                super::destiny_rank_up::on_destiny_rank_up_with_catalog(ctx, req, loader).await
+            }
+            x if x == CmdId::DestinyLevelUpCmd as i16 => {
+                super::destiny_level_up::on_destiny_level_up_with_catalog(ctx, req, loader).await
+            }
+            x if x == CmdId::DestinyStoneUnlockCmd as i16 => {
+                super::destiny_stone_unlock::on_destiny_stone_unlock_with_catalog(
+                    ctx, req, loader,
+                )
+                .await
+            }
+            x if x == CmdId::DestinyStoneUseCmd as i16 => {
+                super::destiny_stone_use::on_destiny_stone_use_with_catalog(ctx, req, loader).await
+            }
+            _ => Err(AppError::InvalidRequest),
         }
     }
 }

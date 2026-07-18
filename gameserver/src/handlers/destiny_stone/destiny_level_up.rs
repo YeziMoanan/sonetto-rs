@@ -1,11 +1,13 @@
-use super::protocol::{DestinyProtocolFailure, send_destiny_failure, send_destiny_success};
+use super::protocol::{
+    DestinyProtocolFailure, decode_destiny_request, load_destiny_catalog, send_destiny_failure,
+    send_destiny_success,
+};
 use crate::error::AppError;
 use crate::network::packet::ClientPacket;
 use crate::state::ConnectionContext;
 use config::destiny::DestinyConfigIndex;
 use database::db::game::destiny::execute_destiny_command;
 use database::models::game::destiny::DestinyCommand;
-use prost::Message;
 use sonettobuf::{CmdId, DestinyLevelUpReply, DestinyLevelUpRequest};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -14,7 +16,29 @@ pub async fn on_destiny_level_up(
     ctx: Arc<Mutex<ConnectionContext>>,
     req: ClientPacket,
 ) -> Result<(), AppError> {
-    let request = DestinyLevelUpRequest::decode(&req.data[..])?;
+    on_destiny_level_up_with_catalog(ctx, req, || {
+        DestinyConfigIndex::try_from_game_db(config::configs::get())
+    })
+    .await
+}
+
+pub(super) async fn on_destiny_level_up_with_catalog<F>(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    req: ClientPacket,
+    load_catalog: F,
+) -> Result<(), AppError>
+where
+    F: FnOnce() -> anyhow::Result<DestinyConfigIndex>,
+{
+    let Some(request) = decode_destiny_request::<DestinyLevelUpRequest, DestinyLevelUpReply>(
+        Arc::clone(&ctx),
+        &req,
+        CmdId::DestinyLevelUpCmd,
+    )
+    .await?
+    else {
+        return Ok(());
+    };
     let (Some(hero_id), Some(target_level)) = (request.hero_id, request.level) else {
         return send_destiny_failure(
             ctx,
@@ -35,7 +59,20 @@ pub async fn on_destiny_level_up(
             conn.state.db.clone(),
         )
     };
-    let catalog = DestinyConfigIndex::try_from_game_db(config::configs::get())?;
+    let Some(catalog) = load_destiny_catalog(
+        Arc::clone(&ctx),
+        CmdId::DestinyLevelUpCmd,
+        DestinyLevelUpReply {
+            hero_id: Some(hero_id),
+            level: Some(target_level),
+        },
+        req.up_tag,
+        load_catalog,
+    )
+    .await?
+    else {
+        return Ok(());
+    };
 
     match execute_destiny_command(
         &pool,
