@@ -1,4 +1,7 @@
-use std::{collections::HashSet, sync::Once};
+use std::{
+    collections::{BTreeMap, BTreeSet, HashSet},
+    sync::Once,
+};
 
 use database::models::game::heros::{Hero, HeroData};
 use gameserver::state::battle::destiny::{
@@ -59,6 +62,21 @@ fn context(
 
 fn kit(ctx: HeroBuildContext) -> ResolvedHeroKit {
     resolve_entity_kit(&ctx).expect("entity kit should resolve")
+}
+
+fn hero_for_facet(facet_id: i32) -> i32 {
+    init_config();
+    config::configs::get()
+        .character_destiny
+        .iter()
+        .find(|hero| {
+            hero.facets_id
+                .split('#')
+                .filter_map(|value| value.parse::<i32>().ok())
+                .any(|id| id == facet_id)
+        })
+        .map(|hero| hero.hero_id)
+        .unwrap_or_else(|| panic!("missing hero owner for facet {facet_id}"))
 }
 
 fn owned_hero(hero_id: i32, ex_skill_level: i32, facet_id: i32, facet_rank: i32) -> HeroData {
@@ -289,6 +307,105 @@ fn hero_3088_foreign_facet_is_inactive_without_compatibility_bonuses() {
     assert!(!resolved.passives.contains(&308801911));
     assert!(!resolved.passives.contains(&308801921));
     assert!(!resolved.passives.contains(&308802111));
+}
+
+#[test]
+fn all_43_facets_cover_four_levels() {
+    init_config();
+    let mut levels_by_facet = BTreeMap::<i32, BTreeSet<i32>>::new();
+
+    for facet in config::configs::get().character_destiny_facets.iter() {
+        levels_by_facet
+            .entry(facet.facets_id)
+            .or_default()
+            .insert(facet.level);
+    }
+
+    assert_eq!(levels_by_facet.len(), 43);
+    let expected_levels = BTreeSet::from([1, 2, 3, 4]);
+
+    for (facet_id, levels) in levels_by_facet {
+        assert_eq!(levels, expected_levels, "facet {facet_id}");
+    }
+}
+
+#[test]
+fn all_valid_facet_rank_pairs_build_for_main_and_substitute() {
+    init_config();
+    let base = HeroBaseAttributes {
+        hp: 10_000,
+        attack: 1_000,
+        defense: 500,
+        mdefense: 500,
+    };
+
+    for facet in config::configs::get().character_destiny_facets.iter() {
+        let hero_id = hero_for_facet(facet.facets_id);
+        let main = context(
+            hero_id,
+            5,
+            facet.level,
+            facet.facets_id,
+            HeroSource::Owned,
+            false,
+        );
+        let substitute = context(
+            hero_id,
+            5,
+            facet.level,
+            facet.facets_id,
+            HeroSource::Owned,
+            true,
+        );
+
+        let main_kit = resolve_entity_kit(&main).expect("main facet kit should resolve");
+        let substitute_kit =
+            resolve_entity_kit(&substitute).expect("substitute facet kit should resolve");
+        assert_eq!(
+            main_kit, substitute_kit,
+            "facet {} level {} hero {}",
+            facet.facets_id, facet.level, hero_id
+        );
+
+        let main_attr = resolve_entity_destiny_attributes(&main, base).expect("main attrs");
+        let substitute_attr =
+            resolve_entity_destiny_attributes(&substitute, base).expect("substitute attrs");
+        assert_eq!(
+            main_attr, substitute_attr,
+            "facet {} level {} hero {}",
+            facet.facets_id, facet.level, hero_id
+        );
+    }
+}
+
+#[test]
+fn all_37_heroes_cover_all_925_nodes() {
+    init_config();
+    let game = config::configs::get();
+    let mut global_nodes = HashSet::new();
+
+    assert_eq!(game.character_destiny.len(), 37);
+    assert_eq!(game.character_destiny_slots.len(), 925);
+
+    for hero in game.character_destiny.iter() {
+        let nodes: HashSet<_> = game
+            .character_destiny_slots
+            .iter()
+            .filter(|slot| slot.slots_id == hero.slots_id)
+            .map(|slot| (slot.stage, slot.node))
+            .collect();
+        assert_eq!(nodes.len(), 25, "hero {}", hero.hero_id);
+        assert!(
+            nodes
+                .iter()
+                .all(|(stage, node)| (1..=4).contains(stage) && (1..=25).contains(node))
+        );
+        for node in nodes {
+            assert!(global_nodes.insert((hero.hero_id, node.0, node.1)));
+        }
+    }
+
+    assert_eq!(global_nodes.len(), 925);
 }
 
 #[test]
