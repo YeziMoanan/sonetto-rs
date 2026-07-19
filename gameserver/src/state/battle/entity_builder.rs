@@ -1,12 +1,12 @@
+use super::destiny::{
+    DestinyResolveError, DestinyState, HeroBaseAttributes, HeroBuildContext, HeroSource,
+    ResolvedDestinyAttributes, ResolvedHeroKit, resolve_destiny_attributes, resolve_hero_kit,
+};
+use anyhow::Result;
 use config::configs;
 use database::{
     db::game::equipment::Equipment,
     models::game::{equipment::UserEquipmentModel, heros::HeroData},
-};
-use anyhow::Result;
-use super::destiny::{
-    DestinyResolveError, DestinyState, HeroBaseAttributes, HeroBuildContext, HeroSource,
-    ResolvedDestinyAttributes, ResolvedHeroKit, resolve_destiny_attributes, resolve_hero_kit,
 };
 use sonettobuf::{EquipRecord, FightEntityInfo, HeroAttribute, HeroExAttribute, HeroSpAttribute};
 use sqlx::SqlitePool;
@@ -16,6 +16,7 @@ use sqlx::SqlitePool;
 pub fn resolve_entity_kit(
     context: &HeroBuildContext,
 ) -> Result<ResolvedHeroKit, DestinyResolveError> {
+    validate_destiny_state_shape(context)?;
     let game = configs::get();
     let index = config::destiny::DestinyConfigIndex::try_from_game_db(game)
         .map_err(|error| DestinyResolveError::InvalidConfig(error.to_string()))?;
@@ -42,16 +43,16 @@ fn effective_destiny_context(
 ) -> (HeroBuildContext, bool) {
     let facet_id = context.destiny.facet_id;
     let facet_rank = context.destiny.rank;
-    let facet_requested = facet_id > 0 && facet_rank > 0;
+    let facet_requested = facet_id > 0;
     let facet_owned = index
         .hero(context.hero_id)
         .is_some_and(|hero| hero.facet_ids.contains(&facet_id));
-    let facet_rank_exists = index.facet(facet_id, facet_rank).is_some();
-    let facet_active = facet_requested && facet_owned && facet_rank_exists;
+    let facet_rank_exists = facet_rank > 0 && index.facet(facet_id, facet_rank).is_some();
+    let facet_active = facet_requested && facet_rank > 0 && facet_owned && facet_rank_exists;
 
     let mut effective_context = context.clone();
     if facet_requested && !facet_active {
-        effective_context.destiny = DestinyState::default();
+        effective_context.destiny.facet_id = 0;
     }
     (effective_context, facet_active)
 }
@@ -75,6 +76,24 @@ fn validate_ex_skill_level(
         return Err(DestinyResolveError::InvalidState(format!(
             "ex skill level {} exceeds configured maximum {} for hero {}",
             context.ex_skill_level, max_level, context.hero_id
+        )));
+    }
+    Ok(())
+}
+
+fn validate_destiny_state_shape(context: &HeroBuildContext) -> Result<(), DestinyResolveError> {
+    let state = context.destiny;
+    let no_progress = state.rank == 0 && state.level == 0;
+    let complete_progress = state.rank > 0 && state.level > 0;
+    if state.rank < 0
+        || state.level < 0
+        || state.facet_id < 0
+        || (!no_progress && !complete_progress)
+        || (no_progress && state.facet_id > 0)
+    {
+        return Err(DestinyResolveError::InvalidState(format!(
+            "hero {} rank {} level {} facet {}",
+            context.hero_id, state.rank, state.level, state.facet_id
         )));
     }
     Ok(())
@@ -167,7 +186,7 @@ pub async fn build_hero_entity(
     // final attribute set that already includes equipment bonuses.
     let destiny_base = base_hero_attributes(hero_data);
     let mut attr = build_attr(hero_data, equip_data.as_ref());
-    apply_destiny_entity_attributes(&context, &mut attr, destiny_base);
+    apply_destiny_entity_attributes(&context, &mut attr, destiny_base)?;
     let current_hp = attr.hp.unwrap_or(0);
 
     let initial_ex_point = calculate_initial_ex_point(record.hero_id, &kit.passives);
@@ -235,12 +254,18 @@ pub fn resolve_entity_destiny_attributes(
     context: &HeroBuildContext,
     base: HeroBaseAttributes,
 ) -> Result<ResolvedDestinyAttributes, DestinyResolveError> {
+    validate_destiny_state_shape(context)?;
     let game = configs::get();
     let index = config::destiny::DestinyConfigIndex::try_from_game_db(game)
         .map_err(|error| DestinyResolveError::InvalidConfig(error.to_string()))?;
     validate_ex_skill_level(game, context)?;
     let (effective_context, _) = effective_destiny_context(&index, context);
-    resolve_destiny_attributes(&index, effective_context.hero_id, effective_context.destiny, base)
+    resolve_destiny_attributes(
+        &index,
+        effective_context.hero_id,
+        effective_context.destiny,
+        base,
+    )
 }
 
 pub fn resolve_hero_destiny_attributes(
@@ -330,25 +355,13 @@ fn apply_destiny_entity_attributes(
     context: &HeroBuildContext,
     attr: &mut HeroAttribute,
     base: HeroBaseAttributes,
-) {
-    if context.destiny.rank == 0 || context.destiny.level == 0 {
-        return;
-    }
-    match resolve_entity_destiny_attributes(context, base) {
-        Ok(resolved) => {
-            attr.hp = Some(attr.hp.unwrap_or(0).saturating_add(resolved.hp));
-            attr.attack = Some(attr.attack.unwrap_or(0).saturating_add(resolved.attack));
-            attr.defense = Some(attr.defense.unwrap_or(0).saturating_add(resolved.defense));
-            attr.mdefense = Some(attr.mdefense.unwrap_or(0).saturating_add(resolved.mdefense));
-        }
-        Err(error) => tracing::warn!(
-            hero_id = context.hero_id,
-            rank = context.destiny.rank,
-            level = context.destiny.level,
-            error = %error,
-            "inactive invalid Destiny attributes; preserving base entity stats"
-        ),
-    }
+) -> Result<(), DestinyResolveError> {
+    let resolved = resolve_entity_destiny_attributes(context, base)?;
+    attr.hp = Some(attr.hp.unwrap_or(0).saturating_add(resolved.hp));
+    attr.attack = Some(attr.attack.unwrap_or(0).saturating_add(resolved.attack));
+    attr.defense = Some(attr.defense.unwrap_or(0).saturating_add(resolved.defense));
+    attr.mdefense = Some(attr.mdefense.unwrap_or(0).saturating_add(resolved.mdefense));
+    Ok(())
 }
 
 fn build_attr(r: &HeroData, equip: Option<&Equipment>) -> HeroAttribute {

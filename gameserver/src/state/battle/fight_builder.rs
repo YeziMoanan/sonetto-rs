@@ -1,7 +1,7 @@
 use super::BattleContext;
 use super::destiny::{
-    DestinyModifierMap, DestinyState, HeroBaseAttributes, HeroBuildContext, HeroSource,
-    ResolvedDestinyAttributes,
+    DestinyModifierMap, DestinyResolveError, DestinyState, HeroBaseAttributes, HeroBuildContext,
+    HeroSource, ResolvedDestinyAttributes,
 };
 use super::entity_builder;
 use super::trial::{
@@ -132,7 +132,7 @@ pub async fn build_attacker_team_with_destiny_modifiers(
         let hero_data = hero.get_uid(*hero_uid as i32).await?;
         let entity =
             entity_builder::build_hero_entity(pool, &hero_data, position, 1, false).await?;
-        collect_destiny_modifiers(&mut modifiers, entity.uid, &hero_data, false);
+        collect_destiny_modifiers(&mut modifiers, entity.uid, &hero_data, false)?;
         entitys.push(entity);
     }
 
@@ -165,7 +165,7 @@ pub async fn build_attacker_team_with_destiny_modifiers(
         if let Some(enhance_info) = entity.enhance_info_box.as_mut() {
             enhance_info.uid = Some(uid);
         }
-        collect_destiny_modifiers(&mut modifiers, entity.uid, &hero_data, true);
+        collect_destiny_modifiers(&mut modifiers, entity.uid, &hero_data, true)?;
         ordered_sub_entitys.push((sub_position, entity));
     }
 
@@ -235,22 +235,14 @@ fn collect_destiny_modifiers(
     uid: Option<i64>,
     hero_data: &database::models::game::heros::HeroData,
     is_substitute: bool,
-) {
-    let Some(uid) = uid else { return };
-    match entity_builder::resolve_hero_destiny_attributes(hero_data, is_substitute) {
-        Ok(resolved) => {
-            modifiers.insert(
-                uid,
-                entity_builder::merge_hero_combat_attributes(resolved, hero_data),
-            );
-        }
-        Err(error) => tracing::warn!(
-            uid,
-            hero_id = hero_data.record.hero_id,
-            error = %error,
-            "Destiny combat modifiers unavailable; preserving base battle behavior"
-        ),
-    }
+) -> Result<(), super::destiny::DestinyResolveError> {
+    let Some(uid) = uid else { return Ok(()) };
+    let resolved = entity_builder::resolve_hero_destiny_attributes(hero_data, is_substitute)?;
+    modifiers.insert(
+        uid,
+        entity_builder::merge_hero_combat_attributes(resolved, hero_data),
+    );
+    Ok(())
 }
 
 fn build_trial_hero_entity(
@@ -348,12 +340,7 @@ fn build_trial_hero_entity(
         source: HeroSource::Trial,
     };
     let kit = entity_builder::resolve_entity_kit(&context).map_err(|error| {
-        anyhow::anyhow!(
-            "failed to resolve trial {} hero {} kit: {}",
-            trial_id,
-            trial_data.hero_id,
-            error
-        )
+        contextualize_trial_destiny_error(error, trial_id, trial_data.hero_id, "kit")
     })?;
     let base = HeroBaseAttributes {
         hp,
@@ -363,12 +350,7 @@ fn build_trial_hero_entity(
     };
     let modifier =
         entity_builder::resolve_entity_destiny_attributes(&context, base).map_err(|error| {
-            anyhow::anyhow!(
-                "failed to resolve trial {} hero {} attributes: {}",
-                trial_id,
-                trial_data.hero_id,
-                error
-            )
+            contextualize_trial_destiny_error(error, trial_id, trial_data.hero_id, "attributes")
         })?;
     let attr = HeroAttribute {
         hp: Some(hp.saturating_add(modifier.hp)),
@@ -713,6 +695,42 @@ pub fn try_attacker_substitute_uid(trial_count: usize, substitute_index: usize) 
         ));
     }
     Ok(-(ordinal as i64))
+}
+
+fn contextualize_trial_destiny_error(
+    error: DestinyResolveError,
+    trial_id: i32,
+    hero_id: i32,
+    component: &str,
+) -> anyhow::Error {
+    anyhow::Error::new(error).context(format!(
+        "failed to resolve trial {trial_id} hero {hero_id} {component}"
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn trial_destiny_context_preserves_typed_resolver_error() {
+        let error = contextualize_trial_destiny_error(
+            super::super::destiny::DestinyResolveError::InvalidState("broken trial state".into()),
+            2_241_001,
+            3041,
+            "kit",
+        );
+
+        assert!(
+            error
+                .downcast_ref::<super::super::destiny::DestinyResolveError>()
+                .is_some_and(|error| matches!(
+                    error,
+                    super::super::destiny::DestinyResolveError::InvalidState(_)
+                ))
+        );
+        assert!(error.to_string().contains("trial 2241001 hero 3041 kit"));
+    }
 }
 
 fn parse_monster_skill_group(active_skill: &str, target_group: i32) -> Vec<i32> {

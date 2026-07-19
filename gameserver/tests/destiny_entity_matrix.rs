@@ -2,8 +2,8 @@ use std::{collections::HashSet, sync::Once};
 
 use database::models::game::heros::{Hero, HeroData};
 use gameserver::state::battle::destiny::{
-    DestinyState, HeroBaseAttributes, HeroBuildContext, HeroSource, ResolvedHeroKit,
-    resolve_destiny_attributes,
+    DestinyResolveError, DestinyState, HeroBaseAttributes, HeroBuildContext, HeroSource,
+    ResolvedHeroKit, resolve_destiny_attributes,
 };
 use gameserver::state::battle::entity_builder::{
     build_hero_entity, resolve_entity_destiny_attributes, resolve_entity_kit,
@@ -90,7 +90,7 @@ fn owned_hero(hero_id: i32, ex_skill_level: i32, facet_id: i32, facet_rank: i32)
             talent_style_red: 0,
             is_favor: false,
             destiny_rank: facet_rank,
-            destiny_level: 1,
+            destiny_level: if facet_rank == 0 { 0 } else { 1 },
             destiny_stone: facet_id,
             red_dot: 0,
             extra_str: String::new(),
@@ -291,14 +291,91 @@ fn hero_3088_foreign_facet_is_inactive_without_compatibility_bonuses() {
     assert!(!resolved.passives.contains(&308802111));
 }
 
+#[test]
+fn foreign_and_missing_facets_preserve_node_attributes_without_facet_kit() {
+    let base = HeroBaseAttributes {
+        hp: 10_000,
+        attack: 1_000,
+        defense: 500,
+        mdefense: 500,
+    };
+    let no_facet = context(3088, 5, 4, 0, HeroSource::Owned, false);
+    let foreign = context(3088, 5, 4, 311001, HeroSource::Owned, false);
+    let missing = context(3088, 5, 4, 399999, HeroSource::Owned, false);
+
+    let no_facet_attrs = resolve_entity_destiny_attributes(&no_facet, base.clone()).unwrap();
+    let foreign_attrs = resolve_entity_destiny_attributes(&foreign, base.clone()).unwrap();
+    let missing_attrs = resolve_entity_destiny_attributes(&missing, base).unwrap();
+    let attrs = |value: &gameserver::state::battle::destiny::ResolvedDestinyAttributes| {
+        (value.hp, value.attack, value.defense, value.mdefense)
+    };
+
+    assert_ne!(attrs(&no_facet_attrs), (0, 0, 0, 0));
+    assert_eq!(attrs(&foreign_attrs), attrs(&no_facet_attrs));
+    assert_eq!(attrs(&missing_attrs), attrs(&no_facet_attrs));
+    assert_eq!(
+        kit(foreign).passives,
+        kit(no_facet.clone()).passives,
+        "foreign facet may disable facet kit but not node passives"
+    );
+    assert_eq!(kit(missing).passives, kit(no_facet).passives);
+}
+
+#[tokio::test]
+async fn entity_builder_rejects_partial_or_missing_destiny_state() {
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+
+    for (rank, level) in [(1, 0), (0, 1)] {
+        let mut hero = owned_hero(3025, 0, 0, rank);
+        hero.record.destiny_level = level;
+        let error = build_hero_entity(&pool, &hero, 1, 1, false)
+            .await
+            .expect_err("partial Destiny state must not be silently ignored");
+        assert!(
+            error
+                .downcast_ref::<DestinyResolveError>()
+                .is_some_and(|error| matches!(error, DestinyResolveError::InvalidState(_))),
+            "unexpected partial-state error: {error:?}"
+        );
+    }
+
+    let valid_zero = owned_hero(3025, 0, 0, 0);
+    assert!(
+        build_hero_entity(&pool, &valid_zero, 1, 1, false)
+            .await
+            .is_ok(),
+        "the exact zero Destiny state remains a valid no-op"
+    );
+
+    let facet_without_progress = owned_hero(3025, 0, 302501, 0);
+    let error = build_hero_entity(&pool, &facet_without_progress, 1, 1, false)
+        .await
+        .expect_err("a facet without rank and level must not become a no-op");
+    assert!(
+        error
+            .downcast_ref::<DestinyResolveError>()
+            .is_some_and(|error| matches!(error, DestinyResolveError::InvalidState(_))),
+        "unexpected facet-only error: {error:?}"
+    );
+
+    let hero_without_destiny = owned_hero(3005, 0, 0, 1);
+    let error = build_hero_entity(&pool, &hero_without_destiny, 1, 1, false)
+        .await
+        .expect_err("missing Destiny config must not be silently ignored");
+    assert!(
+        error
+            .downcast_ref::<DestinyResolveError>()
+            .is_some_and(|error| matches!(error, DestinyResolveError::InvalidConfig(_))),
+        "unexpected missing-config error: {error:?}"
+    );
+}
+
 #[tokio::test]
 async fn live_builder_foreign_facet_does_not_add_destiny_attributes() {
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-    let valid = owned_hero(3088, 5, 308801, 4);
     let foreign = owned_hero(3088, 5, 311001, 4);
-    let baseline = owned_hero(3088, 5, 0, 0);
+    let baseline = owned_hero(3088, 5, 0, 4);
 
-    let valid_entity = build_hero_entity(&pool, &valid, 1, 1, false).await.unwrap();
     let foreign_entity = build_hero_entity(&pool, &foreign, 1, 1, false)
         .await
         .unwrap();
@@ -306,10 +383,8 @@ async fn live_builder_foreign_facet_does_not_add_destiny_attributes() {
         .await
         .unwrap();
 
-    let valid_attr = valid_entity.attr.as_ref().expect("valid attrs");
     let foreign_attr = foreign_entity.attr.as_ref().expect("foreign attrs");
     let baseline_attr = baseline_entity.attr.as_ref().expect("baseline attrs");
-    assert!(valid_attr.hp > baseline_attr.hp);
     assert_eq!(foreign_attr.hp, baseline_attr.hp);
     assert_eq!(foreign_attr.attack, baseline_attr.attack);
     assert_eq!(foreign_attr.defense, baseline_attr.defense);
